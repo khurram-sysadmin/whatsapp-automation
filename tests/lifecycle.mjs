@@ -1,0 +1,30 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {PGlite} from '@electric-sql/pglite';
+const db=new PGlite();
+await db.exec('CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role;');
+await db.exec(fs.readFileSync(new URL('../backend/supabase/001-base.sql',import.meta.url),'utf8'));
+await db.exec(fs.readFileSync(new URL('../backend/supabase/002-production-hardening.sql',import.meta.url),'utf8'));
+await db.exec(fs.readFileSync(new URL('../backend/supabase/003-campaign-lifecycle.sql',import.meta.url),'utf8'));
+const checks=[];let serial=0;
+const api=async p=>(await db.query('select outreach.api($1::jsonb) r',[JSON.stringify({requestId:`local-lifecycle-${++serial}`, ...p})])).rows[0].r;
+const status=async cid=>(await db.query('select status,completed_at from outreach.campaigns where id=$1',[cid])).rows[0];
+async function fixture(count=1){const c=await api({action:'create',name:`Local ${serial}`,template:'Hello {{name}}',timezone:'UTC',sendingStartTime:'00:00',sendingEndTime:'23:59'});assert.equal(c.success,true);const contacts=Array.from({length:count},(_,i)=>({name:'Test',phone:`+1202555${String(serial*10+i).padStart(4,'0')}`}));assert.equal((await api({action:'import',campaignId:c.campaignId,contacts})).success,true);assert.equal((await api({action:'start',campaignId:c.campaignId})).success,true);return c.campaignId;}
+async function setAll(cid,next){await db.query('UPDATE outreach.messages SET status=$2 WHERE campaign_id=$1',[cid,next]);}
+const first=await fixture(2);let rows=(await db.query('SELECT id FROM outreach.messages WHERE campaign_id=$1 ORDER BY id',[first])).rows;
+await db.query("UPDATE outreach.messages SET status='sent',sent_at=now() WHERE id=$1",[rows[0].id]);assert.equal((await status(first)).status,'running');
+await db.query("UPDATE outreach.messages SET status='failed' WHERE id=$1",[rows[1].id]);assert.equal((await status(first)).status,'completed');assert.ok((await status(first)).completed_at);checks.push('Completion occurs in the final outcome transaction; failed messages also finish the queue');
+for(const action of ['stop','pause','resume']){const r=await api({action,campaignId:first});assert.equal(r.success,true);assert.equal(r.status,'completed');}assert.equal((await status(first)).status,'completed');checks.push('Stale Stop/Pause/Resume preserve Completed and return success');
+const restart=await api({action:'start',campaignId:first});assert.equal(restart.success,false);assert.equal(restart.httpStatus,409);checks.push('Completed campaigns cannot restart through the backend');
+const uncertain=await fixture();await setAll(uncertain,'unknown');assert.equal((await status(uncertain)).status,'completed');const payload={action:'delete',campaignId:uncertain,requestId:'local-delete-retry-uncertain'};
+const removed=await api(payload);assert.equal(removed.success,true);assert.deepEqual(await api(payload),removed);assert.equal((await api({action:'delete',campaignId:uncertain})).success,true);
+assert.equal((await db.query('SELECT status FROM outreach.messages WHERE campaign_id=$1',[uncertain])).rows[0].status,'unknown');assert.equal((await api({action:'detail',campaignId:uncertain})).httpStatus,404);assert.ok(!(await api({action:'list'})).data.some(c=>c.id===uncertain));checks.push('First delete succeeds with an uncertain outcome; records remain and same/new request retries succeed');
+assert.equal((await api({...payload,campaignId:first})).httpStatus,409);checks.push('Request ID conflict protection remains intact');
+const retry=await fixture();await setAll(retry,'dispatching');await setAll(retry,'queued');assert.equal((await status(retry)).status,'running');checks.push('Queued retries and dispatching messages prevent premature completion');
+await api({action:'pause',campaignId:retry});await setAll(retry,'failed');assert.equal((await status(retry)).status,'completed');checks.push('Paused campaigns finish automatically when their last in-flight outcome finishes');
+const inflight=await fixture();await db.query("UPDATE outreach.messages SET status='dispatching',attempts=1,lease_token=gen_random_uuid() WHERE campaign_id=$1",[inflight]);await api({action:'pause',campaignId:inflight});assert.equal((await api({action:'delete',campaignId:inflight})).success,true);let m=(await db.query('SELECT * FROM outreach.messages WHERE campaign_id=$1',[inflight])).rows[0];assert.equal(m.status,'dispatching');
+const finish=(await db.query('SELECT outreach.finish_send($1::jsonb) r',[JSON.stringify({id:m.id,lease_token:m.lease_token,outcome:'accepted',provider_message_id:'local-audit-id',provider_response:{success:true}})])).rows[0].r;assert.equal(finish.saved,true);assert.equal((await status(inflight)).status,'stopped');checks.push('Archiving preserves in-flight reconciliation and cannot restart sending');
+const queued=await fixture();assert.equal((await api({action:'delete',campaignId:queued})).httpStatus,409);await api({action:'pause',campaignId:queued});assert.equal((await api({action:'delete',campaignId:queued})).success,true);assert.equal((await db.query('SELECT status FROM outreach.messages WHERE campaign_id=$1',[queued])).rows[0].status,'canceled');checks.push('Active campaigns require pause/stop before delete and pending messages are canceled');
+const draft=await api({action:'create',name:'Untouched draft',template:'Hi'});assert.equal((await status(draft.campaignId)).status,'draft');assert.equal((await api({action:'delete',campaignId:draft.campaignId})).success,true);checks.push('Empty drafts stay drafts and delete normally');
+await db.exec(fs.readFileSync(new URL('../backend/supabase/003-campaign-lifecycle.sql',import.meta.url),'utf8'));assert.equal((await api({action:'health'})).success,true);checks.push('Migration is safe to apply again');
+console.log(JSON.stringify({passed:true,checks}));await db.close();

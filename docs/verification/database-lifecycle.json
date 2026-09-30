@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "checks": [
+    "Completion occurs in the final outcome transaction; failed messages also finish the queue",
+    "Stale Stop/Pause/Resume preserve Completed and return success",
+    "Completed campaigns cannot restart through the backend",
+    "First delete succeeds with an uncertain outcome; records remain and same/new request retries succeed",
+    "Request ID conflict protection remains intact",
+    "Queued retries and dispatching messages prevent premature completion",
+    "Paused campaigns finish automatically when their last in-flight outcome finishes",
+    "Archiving preserves in-flight reconciliation and cannot restart sending",
+    "Active campaigns require pause/stop before delete and pending messages are canceled",
+    "Empty drafts stay drafts and delete normally",
+    "Migration is safe to apply again"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "Short real key accepted; n8n, Supabase data and import auth verified",
+    "Secret never returned to browser; saved status remains explicit",
+    "Reload and blank-field resave preserve existing secret and URL",
+    "Arbitrary/localhost upstream URLs rejected",
+    "Temporary outage keeps stored credentials and reports actual failure",
+    "Connection recovers without re-entering credentials",
+    "Wrong key cannot claim connected",
+    "Backend authorization failure does not expire the admin session",
+    "Connection settings fit mobile viewport"
+  ]
+}

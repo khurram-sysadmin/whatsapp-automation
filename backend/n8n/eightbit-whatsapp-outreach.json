@@ -1,0 +1,1437 @@
+{
+  "name": "EightBit WhatsApp Outreach",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Campaign API\nAuthenticated actions for campaigns, templates, statistics, replies, controls and JSON contact imports. Each incoming webhook starts its own independent execution.",
+        "height": 220,
+        "width": 1700
+      },
+      "id": "e5357f14-89fe-44e8-a649-9a1fb5a27e4d",
+      "name": "Sticky Note 699fe5a8",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Contact Imports\nCSV/XLSX import with row validation, normalization and duplicates. Supabase rejects suppressed phones. This branch never sends messages.",
+        "height": 165,
+        "width": 2800,
+        "color": 2
+      },
+      "id": "14703036-39d8-4bd0-b4d7-5024b2e3b817",
+      "name": "Sticky Note 61e2b55a",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WASender Events\nVerify X-Webhook-Signature, sanitize and persist events. STOP and unsubscribe suppress immediately before responding. Scheduled branch applies delivery/read/reply updates.",
+        "height": 210,
+        "width": 1800,
+        "color": 3
+      },
+      "id": "8b857555-d2e8-4768-8048-7300a6ad475b",
+      "name": "Sticky Note bb39d02f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Scheduled Worker\nOne 15-second scheduler: recover expired leases, process statuses/replies, claim one due message and send. Supabase retains intervals, timezone windows, retries and progress. Unknown outcomes require review.",
+        "height": 220,
+        "width": 2250,
+        "color": 4
+      },
+      "id": "129beae8-a8b3-4bf0-8ea7-8fbe6cdf4b58",
+      "name": "Sticky Note 3d1443fa",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Manual Validation and Supabase Setup\nManual Setup and Validation runs 12 safe checks only. Create tables and RPC functions once by running supabase-setup.sql in Supabase SQL Editor. Project URL and API key authorize runtime requests; they cannot install arbitrary SQL. The old direct-database installer has been removed.",
+        "height": 190,
+        "width": 1300,
+        "color": 5
+      },
+      "id": "a4fe9df0-5f37-442f-a467-36a5adfb99f0",
+      "name": "Sticky Note b984109b",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        96,
+        2704
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## START HERE — SUPABASE API\nONE WORKFLOW, no Postgres connection nodes. Set the project URL once in Supabase API Configuration. Select your Supabase API credential (Host = project URL, Secret Key = backend key) on the eight Supabase HTTP nodes. Run supabase-setup.sql once in Supabase SQL Editor. Add WASender and webhook/API authentication credentials later. Keep inactive until authorized tests pass. No database host, port, username or password is used by this workflow.",
+        "height": 410,
+        "width": 1800,
+        "color": 6
+      },
+      "id": "cd913854-7b24-4a9a-8b59-98f2dd51c465",
+      "name": "Sticky Note 9ea5ba62",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -432
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eightbit-outreach/v1/api",
+        "responseMode": "responseNode",
+        "options": {},
+        "authentication": "headerAuth"
+      },
+      "id": "efbb7559-e3e6-435b-a665-35395d7f236d",
+      "name": "Campaign API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        320
+      ],
+      "webhookId": "3924206b-e5c2-4b3c-ba0e-fdb0ed61643b",
+      "notesInFlow": true,
+      "notes": "Require X-Outreach-Key header. Keep credential in frontend server, not browser source. Inactive until configured.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "pUnMrd7WnZQGLDCa",
+          "name": "EightBit Frontend Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shared source embedded into import and API Code nodes. No external modules.\nconst fields = ['name','first_name','company','phone','email','city','industry'];\nfunction phone(value, options = {}) {\n  if (typeof value !== 'string') throw new Error('Phone must be text; format Excel phone cells as Text');\n  let p = value.trim();\n  if (!/^[+\\d\\s().-]+$/.test(p)) throw new Error('Phone contains unsupported characters');\n  p = p.replace(/[\\s().-]/g,'');\n  if (p.startsWith('00')) p = '+' + p.slice(2);\n  if (!p.startsWith('+')) {\n    if (options.phoneFormat === 'international') p = '+' + p;\n    else if (/^[1-9]\\d{0,2}$/.test(options.defaultCallingCode || '')) {\n      const trunk = options.trunkPrefix || '';\n      if (trunk && !/^\\d{1,3}$/.test(trunk)) throw new Error('Invalid trunkPrefix');\n      if (trunk && p.startsWith(trunk)) p = p.slice(trunk.length);\n      p = '+' + options.defaultCallingCode + p;\n    } else throw new Error('Use +country-code or specify defaultCallingCode');\n  }\n  if (!/^\\+[1-9]\\d{7,14}$/.test(p)) throw new Error('Invalid international phone length');\n  return p;\n}\nfunction clean(value, max = 200) {\n  const s = String(value ?? '').normalize('NFKC').replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g,'').trim();\n  if (s.length > max) throw new Error('Field exceeds ' + max + ' characters');\n  if (s.includes('{{') || s.includes('}}')) throw new Error('Contact data cannot contain template delimiters');\n  return s;\n}\nfunction normalizeContacts(rows, options = {}) {\n  if (!Array.isArray(rows) || !rows.length || rows.length > 5000) throw new Error('Import 1-5000 rows per request');\n  const seen = new Set(), contacts = [], rejected = []; let duplicates = 0;\n  rows.forEach((raw, i) => {\n    try {\n      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid contact');\n      const row = Object.fromEntries(Object.entries(raw).map(([k,v])=>[k.replace(/^\\uFEFF/,'').trim().toLowerCase().replace(/\\s+/g,'_'),v]));\n      const c = {};\n      for (const k of fields) c[k] = k === 'phone' ? phone(row[k], options) : clean(row[k], k === 'email' ? 254 : 200);\n      c.first_name ||= c.name.split(/\\s+/)[0] || '';\n      if (c.email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c.email)) throw new Error('Invalid email');\n      if (seen.has(c.phone)) { duplicates++; return; }\n      seen.add(c.phone); contacts.push(c);\n    } catch (e) { rejected.push({row:i+2,error:e.message}); }\n  });\n  return {contacts,validation:{received:rows.length,valid:contacts.length,duplicates,rejectedCount:rejected.length,rejected:rejected.slice(0,100),errorsTruncated:rejected.length>100}};\n}\nfunction normalizeTemplate(value) {\n  if (typeof value !== 'string' || !value.trim() || value.length>4096) throw new Error('Template must contain 1-4096 characters');\n  const t = value.replace(/\\{\\{\\s*([a-z_]+)\\s*\\}\\}/g, (_,k) => {\n    if (!fields.includes(k)) throw new Error('Unsupported template variable: '+k);\n    return '{{'+k+'}}';\n  });\n  if (/\\{\\{|\\}\\}/.test(t.replace(/\\{\\{[a-z_]+\\}\\}/g,''))) throw new Error('Malformed template');\n  return t;\n}\n\nconst source = $input.first().json;\ntry {\n const raw = source.body ?? source;\n if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('JSON object required');\n const allowed = ['create','list','detail','start','pause','resume','stop','stats','replies','messages','templates','saveTemplate','suppress','import','health','delete','deleteTemplate','contacts','suppressions'];\n if (!allowed.includes(raw.action)) throw new Error('Unsupported action');\n const p = {action:raw.action};\n for (const k of ['requestId','campaignId','templateId','name','template','timezone','sendingStartTime','sendingEndTime','sendIntervalSeconds','limit','offset','reason']) if (raw[k] !== undefined) p[k] = raw[k];\n const read = ['list','detail','stats','replies','messages','templates','health','contacts','suppressions'].includes(p.action);\n if (!read && (typeof p.requestId !== 'string' || p.requestId.length<8 || p.requestId.length>128)) throw new Error('requestId must be 8-128 characters');\n if (p.campaignId !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.campaignId)) throw new Error('Invalid campaignId');\n if (['detail','messages','start','pause','resume','stop','delete','import'].includes(p.action) && !p.campaignId) throw new Error('campaignId required');\n if (p.action==='deleteTemplate' && (typeof p.templateId!=='string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.templateId))) throw new Error('Invalid templateId');\n if (['create','saveTemplate'].includes(p.action)) { p.template=normalizeTemplate(p.template); p.name=clean(p.name); if (!p.name) throw new Error('Name required'); }\n if (p.timezone !== undefined) { if(typeof p.timezone !== 'string') throw new Error('Invalid timezone'); new Intl.DateTimeFormat('en-US',{timeZone:p.timezone}).format(); }\n for (const k of ['sendingStartTime','sendingEndTime']) if(p[k]!==undefined && !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(p[k])) throw new Error('Use HH:mm for '+k);\n if(p.sendIntervalSeconds!==undefined && (!Number.isInteger(p.sendIntervalSeconds) || p.sendIntervalSeconds<15 || p.sendIntervalSeconds>86400)) throw new Error('Interval must be 15-86400 seconds');\n for(const k of ['limit','offset']) if(p[k]!==undefined && (!Number.isInteger(p[k]) || p[k]<0 || p[k]>1000000)) throw new Error('Invalid '+k);\n if(p.action==='suppress') { p.phone=phone(raw.phone); p.reason=clean(raw.reason || 'Manual opt-out',500); }\n if(p.action==='import') Object.assign(p,normalizeContacts(raw.contacts,raw));\n return [{json:{valid:true,payload:p}}];\n} catch(e) { return [{json:{valid:false,result:{success:false,httpStatus:400,error:e.message}}}]; }\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "13e01915-0e72-4f8e-8369-76ea5aa8de80",
+      "name": "Validate API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        320
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6e8ef504-f0fc-4c2a-b65d-5835d157523e",
+      "name": "Request Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        320
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i=>({json:i.json.error?{result:{success:false,httpStatus:503,error:'Database unavailable; retry with the same requestId'}}:i.json}));"
+      },
+      "id": "c699b27e-b376-4ae1-b1f0-e68ca050b3c2",
+      "name": "Sanitize Database Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        320
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.result ?? $json }}",
+        "options": {
+          "responseCode": "={{ $json.result?.httpStatus ?? $json.httpStatus ?? 200 }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "6c42d1a3-becb-4738-8b5d-7cdec8feedb3",
+      "name": "Return Campaign JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1408,
+        320
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eightbit-outreach/v1/import",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "31c6bad6-490e-40f3-9f64-72f2e53a9762",
+      "name": "Upload Contacts",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        96,
+        928
+      ],
+      "webhookId": "a3b01fb1-f889-41e5-bf8b-9a60f2caaa45",
+      "notesInFlow": true,
+      "notes": "Require X-Outreach-Key header. Keep credential in frontend server, not browser source. Inactive until configured.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "pUnMrd7WnZQGLDCa",
+          "name": "EightBit Frontend Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$input.first(), q=item.json.query ?? {};\ntry {\n if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q.campaignId || '')) throw new Error('campaignId query parameter required');\n if(typeof q.requestId!=='string'||q.requestId.length<8||q.requestId.length>128) throw new Error('requestId query parameter must be 8-128 characters');\n const keys=Object.keys(item.binary || {}); if(keys.length!==1) throw new Error('Upload exactly one file in multipart field file');\n const f=item.binary[keys[0]]; const extension=String(f.fileExtension || f.fileName?.split('.').pop() || '').toLowerCase();\n if(!['csv','xlsx'].includes(extension)) throw new Error('Only CSV and XLSX are supported');\n const buffer=await this.helpers.getBinaryDataBuffer(0,keys[0]);\n if(buffer.length>5*1024*1024) throw new Error('Maximum compressed file size is 5 MB');\n return [{json:{valid:true,format:extension,campaignId:q.campaignId,requestId:q.requestId,defaultCallingCode:q.defaultCallingCode,phoneFormat:q.phoneFormat,trunkPrefix:q.trunkPrefix},binary:{file:f}}];\n} catch(e) { return [{json:{valid:false,result:{success:false,httpStatus:400,error:e.message}}}]; }\n"
+      },
+      "id": "826159a6-4e81-492f-8d6f-4d2e18a7cd6c",
+      "name": "Validate Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        1008
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "020e1ba3-5f5f-437e-9694-63f0032e87f0",
+      "name": "Upload Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        1008
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.format }}",
+              "rightValue": "csv",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ba3df98d-ab2a-4cfb-a5aa-8f72d28dddf2",
+      "name": "CSV or Excel",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        848,
+        1008
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "file",
+        "options": {
+          "enableBOM": true,
+          "relaxQuotes": false,
+          "headerRow": true,
+          "maxRowCount": 5001,
+          "skipRecordsWithErrors": {
+            "value": {}
+          }
+        }
+      },
+      "id": "a0bb0011-f5c2-405c-a86f-764d1d1e972f",
+      "name": "Read CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        880
+      ],
+      "notesInFlow": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Read 5001 rows to detect overflow; never silently truncate a 5000-row import."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shared source embedded into import and API Code nodes. No external modules.\nconst fields = ['name','first_name','company','phone','email','city','industry'];\nfunction phone(value, options = {}) {\n  if (typeof value !== 'string') throw new Error('Phone must be text; format Excel phone cells as Text');\n  let p = value.trim();\n  if (!/^[+\\d\\s().-]+$/.test(p)) throw new Error('Phone contains unsupported characters');\n  p = p.replace(/[\\s().-]/g,'');\n  if (p.startsWith('00')) p = '+' + p.slice(2);\n  if (!p.startsWith('+')) {\n    if (options.phoneFormat === 'international') p = '+' + p;\n    else if (/^[1-9]\\d{0,2}$/.test(options.defaultCallingCode || '')) {\n      const trunk = options.trunkPrefix || '';\n      if (trunk && !/^\\d{1,3}$/.test(trunk)) throw new Error('Invalid trunkPrefix');\n      if (trunk && p.startsWith(trunk)) p = p.slice(trunk.length);\n      p = '+' + options.defaultCallingCode + p;\n    } else throw new Error('Use +country-code or specify defaultCallingCode');\n  }\n  if (!/^\\+[1-9]\\d{7,14}$/.test(p)) throw new Error('Invalid international phone length');\n  return p;\n}\nfunction clean(value, max = 200) {\n  const s = String(value ?? '').normalize('NFKC').replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g,'').trim();\n  if (s.length > max) throw new Error('Field exceeds ' + max + ' characters');\n  if (s.includes('{{') || s.includes('}}')) throw new Error('Contact data cannot contain template delimiters');\n  return s;\n}\nfunction normalizeContacts(rows, options = {}) {\n  if (!Array.isArray(rows) || !rows.length || rows.length > 5000) throw new Error('Import 1-5000 rows per request');\n  const seen = new Set(), contacts = [], rejected = []; let duplicates = 0;\n  rows.forEach((raw, i) => {\n    try {\n      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid contact');\n      const row = Object.fromEntries(Object.entries(raw).map(([k,v])=>[k.replace(/^\\uFEFF/,'').trim().toLowerCase().replace(/\\s+/g,'_'),v]));\n      const c = {};\n      for (const k of fields) c[k] = k === 'phone' ? phone(row[k], options) : clean(row[k], k === 'email' ? 254 : 200);\n      c.first_name ||= c.name.split(/\\s+/)[0] || '';\n      if (c.email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c.email)) throw new Error('Invalid email');\n      if (seen.has(c.phone)) { duplicates++; return; }\n      seen.add(c.phone); contacts.push(c);\n    } catch (e) { rejected.push({row:i+2,error:e.message}); }\n  });\n  return {contacts,validation:{received:rows.length,valid:contacts.length,duplicates,rejectedCount:rejected.length,rejected:rejected.slice(0,100),errorsTruncated:rejected.length>100}};\n}\nfunction normalizeTemplate(value) {\n  if (typeof value !== 'string' || !value.trim() || value.length>4096) throw new Error('Template must contain 1-4096 characters');\n  const t = value.replace(/\\{\\{\\s*([a-z_]+)\\s*\\}\\}/g, (_,k) => {\n    if (!fields.includes(k)) throw new Error('Unsupported template variable: '+k);\n    return '{{'+k+'}}';\n  });\n  if (/\\{\\{|\\}\\}/.test(t.replace(/\\{\\{[a-z_]+\\}\\}/g,''))) throw new Error('Malformed template');\n  return t;\n}\n\nconst request = $('Validate Upload').first().json;\ntry {\n const rows = $input.all().map(i=>i.json).filter(x=>Object.keys(x).length);\n if(rows.some(x=>x.error)) throw new Error('Unable to parse file; check format and headers');\n const p={action:'import',campaignId:request.campaignId,requestId:request.requestId,...normalizeContacts(rows,request)};\n return [{json:{valid:true,payload:p}}];\n} catch(e) { return [{json:{valid:false,result:{success:false,httpStatus:400,error:e.message}}}]; }\n"
+      },
+      "id": "a1acef54-86fb-4de1-9bf4-7d8fb179889a",
+      "name": "Normalize and Validate Contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        1008
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "file",
+        "options": {
+          "headerRow": true,
+          "rawData": true
+        }
+      },
+      "id": "423d9685-832f-464c-a09b-ae4d314274f1",
+      "name": "Read Excel",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        1120
+      ],
+      "notesInFlow": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "First worksheet. Store phone cells as Text. Reject more than 5000 rows after parsing. Bound compressed/decompressed upload sizes at reverse proxy."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.result ?? $json }}",
+        "options": {
+          "responseCode": "={{ $json.result?.httpStatus ?? $json.httpStatus ?? 200 }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "b09a1c7a-76d5-457f-80bf-a07f47727a06",
+      "name": "Return Import JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2528,
+        1008
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "de7fa8ca-0d97-4616-93d5-28c713b62a4a",
+      "name": "Rows Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        1008
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i=>({json:i.json.error?{result:{success:false,httpStatus:503,error:'Import storage failed; retry with same requestId'}}:i.json}));"
+      },
+      "id": "3e00233d-3f5a-4ff6-beb0-e8bef1062a98",
+      "name": "Sanitize Import Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        880
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eightbit-outreach/v1/wasender",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b38ef3ff-fe15-4cef-94a0-b3f50aa19ec7",
+      "name": "Verified WASender Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1712
+      ],
+      "webhookId": "d0063c87-311c-408a-9805-a35f2a29537b",
+      "notesInFlow": true,
+      "notes": "Credential header name X-Webhook-Signature; value = WASender session webhook secret. Provider defines static shared-secret verification.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DP1GePTQdd7Ca7Mh",
+          "name": "WASender Webhook Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shared source embedded into import and API Code nodes. No external modules.\nconst fields = ['name','first_name','company','phone','email','city','industry'];\nfunction phone(value, options = {}) {\n  if (typeof value !== 'string') throw new Error('Phone must be text; format Excel phone cells as Text');\n  let p = value.trim();\n  if (!/^[+\\d\\s().-]+$/.test(p)) throw new Error('Phone contains unsupported characters');\n  p = p.replace(/[\\s().-]/g,'');\n  if (p.startsWith('00')) p = '+' + p.slice(2);\n  if (!p.startsWith('+')) {\n    if (options.phoneFormat === 'international') p = '+' + p;\n    else if (/^[1-9]\\d{0,2}$/.test(options.defaultCallingCode || '')) {\n      const trunk = options.trunkPrefix || '';\n      if (trunk && !/^\\d{1,3}$/.test(trunk)) throw new Error('Invalid trunkPrefix');\n      if (trunk && p.startsWith(trunk)) p = p.slice(trunk.length);\n      p = '+' + options.defaultCallingCode + p;\n    } else throw new Error('Use +country-code or specify defaultCallingCode');\n  }\n  if (!/^\\+[1-9]\\d{7,14}$/.test(p)) throw new Error('Invalid international phone length');\n  return p;\n}\nfunction clean(value, max = 200) {\n  const s = String(value ?? '').normalize('NFKC').replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g,'').trim();\n  if (s.length > max) throw new Error('Field exceeds ' + max + ' characters');\n  if (s.includes('{{') || s.includes('}}')) throw new Error('Contact data cannot contain template delimiters');\n  return s;\n}\nfunction normalizeContacts(rows, options = {}) {\n  if (!Array.isArray(rows) || !rows.length || rows.length > 5000) throw new Error('Import 1-5000 rows per request');\n  const seen = new Set(), contacts = [], rejected = []; let duplicates = 0;\n  rows.forEach((raw, i) => {\n    try {\n      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid contact');\n      const row = Object.fromEntries(Object.entries(raw).map(([k,v])=>[k.replace(/^\\uFEFF/,'').trim().toLowerCase().replace(/\\s+/g,'_'),v]));\n      const c = {};\n      for (const k of fields) c[k] = k === 'phone' ? phone(row[k], options) : clean(row[k], k === 'email' ? 254 : 200);\n      c.first_name ||= c.name.split(/\\s+/)[0] || '';\n      if (c.email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c.email)) throw new Error('Invalid email');\n      if (seen.has(c.phone)) { duplicates++; return; }\n      seen.add(c.phone); contacts.push(c);\n    } catch (e) { rejected.push({row:i+2,error:e.message}); }\n  });\n  return {contacts,validation:{received:rows.length,valid:contacts.length,duplicates,rejectedCount:rejected.length,rejected:rejected.slice(0,100),errorsTruncated:rejected.length>100}};\n}\nfunction normalizeTemplate(value) {\n  if (typeof value !== 'string' || !value.trim() || value.length>4096) throw new Error('Template must contain 1-4096 characters');\n  const t = value.replace(/\\{\\{\\s*([a-z_]+)\\s*\\}\\}/g, (_,k) => {\n    if (!fields.includes(k)) throw new Error('Unsupported template variable: '+k);\n    return '{{'+k+'}}';\n  });\n  if (/\\{\\{|\\}\\}/.test(t.replace(/\\{\\{[a-z_]+\\}\\}/g,''))) throw new Error('Malformed template');\n  return t;\n}\n\nconst payload=$input.first().json.body ?? $input.first().json;\ntry {\n if(!payload || typeof payload!=='object' || typeof payload.event!=='string') throw new Error('Invalid webhook envelope');\n const event=payload.event.trim(), data=payload.data ?? {};\n const source=Array.isArray(data)?data:Array.isArray(data.messages)?data.messages:[data.messages ?? data];\n if(source.length>500) throw new Error('Maximum 500 events per webhook');\n const out=[];\n for(const entry of source) {\n  const key=entry.key ?? {}, id=String(key.id ?? entry.msgId ?? entry.id ?? '');\n  const numeric=Number(entry.messageTimestamp ?? payload.timestamp ?? Date.now());\n  const date=new Date(numeric<1e12?numeric*1000:numeric);\n  const timestamp=Number.isFinite(date.getTime())?date.toISOString():new Date().toISOString();\n  const statusMap={'0':'failed','2':'sent','3':'delivered','4':'read','5':'read',sent:'sent',delivered:'delivered',read:'read',failed:'failed',played:'read'};\n  let status=statusMap[String(entry.update?.status ?? entry.status)];\n  if(event==='message.sent') status ||= 'sent';\n  if(event==='message-receipt.update') status=entry.receipt?.readTimestamp?'read':entry.receipt?.receiptTimestamp?'delivered':status;\n  if(['messages.update','message.sent','message-receipt.update'].includes(event)&&id&&status) {\n   out.push({event_key:'status:'+id+':'+status,kind:'status',provider_message_id:id,status,timestamp}); continue;\n  }\n  if(['messages.upsert','messages.received'].includes(event)&&key.fromMe!==true&&id) {\n   const remote=String(key.remoteJid ?? '');\n   if(remote.endsWith('@g.us')||remote.includes('broadcast')||remote.endsWith('@newsletter')) continue;\n   const pn=key.cleanedSenderPn ?? key.senderPn ?? (remote.endsWith('@s.whatsapp.net')?remote:'');\n   let normalized=null;\n   try {normalized=phone(String(pn).split('@')[0],{phoneFormat:'international'});} catch {}\n   const text=String(entry.messageBody ?? entry.message?.conversation ?? entry.message?.extendedTextMessage?.text ?? entry.message?.imageMessage?.caption ?? entry.message?.videoMessage?.caption ?? '').slice(0,10000);\n   const normalizedText=text.normalize('NFKC').toLowerCase().replace(/[’‘]/g,\"'\").replace(/[^a-z0-9'\\s]/g,' ').replace(/\\s+/g,' ').trim();\n   const opt_out=/^(stop|unsubscribe)(\\s|$)/.test(normalizedText)||/\\b(remove me|don't message me|dont message me|do not message me|stop messaging me)\\b/.test(normalizedText);\n   out.push({event_key:'reply:'+id,kind:normalized?'reply':'ignored',provider_message_id:id,phone:normalized,text,timestamp,opt_out,reason:normalized?undefined:'No phone identity; LID must be resolved before attribution'});\n  }\n }\n return [{json:{valid:true,events:out}}];\n} catch(e) {return [{json:{valid:false,result:{success:false,httpStatus:400,error:e.message}}}];}\n"
+      },
+      "id": "43a6a361-760f-4296-9e1d-317b00eaaf70",
+      "name": "Normalize Provider Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        1712
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "940c52cd-5e8d-4843-8c66-9900d2655247",
+      "name": "Event Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        1712
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i=>({json:i.json.error?{result:{success:false,httpStatus:503,error:'Unable to persist event; retry delivery'}}:i.json}));"
+      },
+      "id": "108d4e15-2c0e-4699-ac23-c3b584ca9764",
+      "name": "Acknowledge Committed Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1712
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.result ?? $json }}",
+        "options": {
+          "responseCode": "={{ $json.result?.httpStatus ?? $json.httpStatus ?? 200 }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "d5925873-cbba-42fa-878b-8536947d4aff",
+      "name": "Return Provider JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1408,
+        1712
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "b7f7ed71-afed-4cc9-b65f-565d6173ee26",
+      "name": "Every 15 Seconds",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        2400
+      ],
+      "notesInFlow": true,
+      "notes": "One scheduled branch performs recovery, event processing and then sends at most one eligible message. All state remains in Supabase."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.wasenderapi.com/api/send-message",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "=={{ $json.personalized_message }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "f0d97ec4-4606-48c7-83b7-9a9e8e93cb88",
+      "name": "Send WhatsApp via WASender",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1408,
+        2400
+      ],
+      "notesInFlow": true,
+      "onError": "continueRegularOutput",
+      "notes": "Same-workflow sender. Never enable automatic HTTP retries; ambiguous outcomes go to review. Configure WASender credential privately.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "uN2q5kquAgYEACX6",
+          "name": "WASender API Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const m=$('Final Suppression and State Check').first().json;\nconst response=$input.first().json;\nlet body=response.body ?? response;\nif(typeof body==='string') { try {body=JSON.parse(body);} catch {body={message:body.slice(0,1000)};} }\nconst http=Number(response.statusCode || 0), data=body?.data ?? {};\nconst ids=[data.msgId,data.messageId,data.id,data.key?.id,data.message?.key?.id].filter(v=>v!==undefined && v!==null && String(v)).map(String);\nconst accepted=http>=200&&http<300&&body.success===true&&ids.length>0;\n// Transport errors, 5xx, and malformed successes are ambiguous: never auto-resend.\nlet outcome=accepted?'accepted':http===429?'retry':([400,401,403,404,405,410,413,415,422].includes(http)?'permanent':'unknown');\nconst error=accepted?null:String(body.message || body.error?.message || (typeof body.error==='string'?body.error:'') || response.error?.message || (outcome==='unknown'?'Send outcome uncertain; reconcile provider logs':'Provider rejected request')).slice(0,1000);\nconst retryHeader=response.headers?.['retry-after']; let retryAfter=0;\nif(retryHeader) retryAfter=/^\\d+$/.test(String(retryHeader))?Number(retryHeader):Math.max(0,Math.ceil((Date.parse(retryHeader)-Date.now())/1000));\n// Store only useful fields: provider responses/webhooks can contain session credentials.\nconst safeResponse={httpStatus:http,success:body.success===true,providerStatus:data.status ?? null,messageIds:ids,error};\nreturn [{json:{id:m.id,lease_token:m.lease_token,outcome,provider_message_id:ids[0] ?? null,provider_aliases:[...new Set(ids)],provider_response:safeResponse,error,retry_after:Number.isFinite(retryAfter)?retryAfter:0}}];\n"
+      },
+      "id": "0148716a-fd22-45fe-bb4f-4ece498e0571",
+      "name": "Classify Provider Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        2400
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {},
+      "id": "d2283de5-a88c-4bb2-80a9-f8cb01f46eb9",
+      "name": "Manual Setup and Validation",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        3104
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shared source embedded into import and API Code nodes. No external modules.\nconst fields = ['name','first_name','company','phone','email','city','industry'];\nfunction phone(value, options = {}) {\n  if (typeof value !== 'string') throw new Error('Phone must be text; format Excel phone cells as Text');\n  let p = value.trim();\n  if (!/^[+\\d\\s().-]+$/.test(p)) throw new Error('Phone contains unsupported characters');\n  p = p.replace(/[\\s().-]/g,'');\n  if (p.startsWith('00')) p = '+' + p.slice(2);\n  if (!p.startsWith('+')) {\n    if (options.phoneFormat === 'international') p = '+' + p;\n    else if (/^[1-9]\\d{0,2}$/.test(options.defaultCallingCode || '')) {\n      const trunk = options.trunkPrefix || '';\n      if (trunk && !/^\\d{1,3}$/.test(trunk)) throw new Error('Invalid trunkPrefix');\n      if (trunk && p.startsWith(trunk)) p = p.slice(trunk.length);\n      p = '+' + options.defaultCallingCode + p;\n    } else throw new Error('Use +country-code or specify defaultCallingCode');\n  }\n  if (!/^\\+[1-9]\\d{7,14}$/.test(p)) throw new Error('Invalid international phone length');\n  return p;\n}\nfunction clean(value, max = 200) {\n  const s = String(value ?? '').normalize('NFKC').replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g,'').trim();\n  if (s.length > max) throw new Error('Field exceeds ' + max + ' characters');\n  if (s.includes('{{') || s.includes('}}')) throw new Error('Contact data cannot contain template delimiters');\n  return s;\n}\nfunction normalizeContacts(rows, options = {}) {\n  if (!Array.isArray(rows) || !rows.length || rows.length > 5000) throw new Error('Import 1-5000 rows per request');\n  const seen = new Set(), contacts = [], rejected = []; let duplicates = 0;\n  rows.forEach((raw, i) => {\n    try {\n      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid contact');\n      const row = Object.fromEntries(Object.entries(raw).map(([k,v])=>[k.replace(/^\\uFEFF/,'').trim().toLowerCase().replace(/\\s+/g,'_'),v]));\n      const c = {};\n      for (const k of fields) c[k] = k === 'phone' ? phone(row[k], options) : clean(row[k], k === 'email' ? 254 : 200);\n      c.first_name ||= c.name.split(/\\s+/)[0] || '';\n      if (c.email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c.email)) throw new Error('Invalid email');\n      if (seen.has(c.phone)) { duplicates++; return; }\n      seen.add(c.phone); contacts.push(c);\n    } catch (e) { rejected.push({row:i+2,error:e.message}); }\n  });\n  return {contacts,validation:{received:rows.length,valid:contacts.length,duplicates,rejectedCount:rejected.length,rejected:rejected.slice(0,100),errorsTruncated:rejected.length>100}};\n}\nfunction normalizeTemplate(value) {\n  if (typeof value !== 'string' || !value.trim() || value.length>4096) throw new Error('Template must contain 1-4096 characters');\n  const t = value.replace(/\\{\\{\\s*([a-z_]+)\\s*\\}\\}/g, (_,k) => {\n    if (!fields.includes(k)) throw new Error('Unsupported template variable: '+k);\n    return '{{'+k+'}}';\n  });\n  if (/\\{\\{|\\}\\}/.test(t.replace(/\\{\\{[a-z_]+\\}\\}/g,''))) throw new Error('Malformed template');\n  return t;\n}\n\nconst checks=[];\nfunction check(name,fn) {if(!fn()) throw new Error('Failed: '+name); checks.push(name);}\ncheck('International phone',()=>phone('+1 (202) 555-0101')==='+12025550101');\ncheck('00 international prefix',()=>phone('0044 7700 900123')==='+447700900123');\ncheck('Explicit national convention',()=>phone('0300 1234567',{defaultCallingCode:'92',trunkPrefix:'0'})==='+923001234567');\ncheck('Preserve significant national zero',()=>phone('06 12345678',{defaultCallingCode:'39'})==='+390612345678');\ncheck('Reject ambiguous national phone',()=>{try{phone('03001234567');return false;}catch{return true;}});\ncheck('Reject numeric spreadsheet phone',()=>{try{phone(12025550101);return false;}catch{return true;}});\ncheck('Import deduplication',()=>normalizeContacts([{phone:'+12025550101',name:'Ada Lovelace'},{phone:'+1 202 555 0101'}]).validation.duplicates===1);\ncheck('First name fallback',()=>normalizeContacts([{phone:'+12025550101',name:'Ada Lovelace'}]).contacts[0].first_name==='Ada');\ncheck('Invalid row reporting',()=>normalizeContacts([{phone:'bad'},{phone:'+12025550101',email:'bad'}]).validation.rejectedCount===2);\ncheck('Template whitespace',()=>normalizeTemplate('Hi {{ first_name }}')==='Hi {{first_name}}');\ncheck('Reject unsupported variables',()=>{try{normalizeTemplate('{{password}}');return false;}catch{return true;}});\ncheck('Reject template injection in contact',()=>normalizeContacts([{phone:'+12025550101',company:'{{phone}}'}]).validation.rejectedCount===1);\nreturn [{json:{success:true,passed:checks.length,checks,note:'Pure validation only. No database connection or WhatsApp messages.'}}];\n"
+      },
+      "id": "cadccbff-0a54-47a1-8970-d09048abb0d3",
+      "name": "Validate Contact and Template Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        3264
+      ],
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_api'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({p:$json.payload}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "55596d2b-9c99-4417-b0bd-1670b4da3d86",
+      "name": "Execute Campaign Action",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        848,
+        320
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput",
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_api'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({p:$json.payload}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "a1bf5fab-c000-4a61-9059-d896461eb43e",
+      "name": "Import Valid Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1968,
+        880
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput",
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_ingest_events'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({events:$json.events}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "b1696bdc-6a03-4b9e-892d-730e50b7a105",
+      "name": "Persist Events and Apply Opt Outs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        848,
+        1712
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput",
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_claim_next'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "b34af4e3-3319-41ca-a868-fb138aa29306",
+      "name": "Claim One Eligible Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        848,
+        2400
+      ],
+      "retryOnFail": false,
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_begin_send'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({mid:$json.id,token:$json.lease_token}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "3d610fe4-e3cc-47ca-9b12-5a54c49ebaa0",
+      "name": "Final Suppression and State Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        2400
+      ],
+      "retryOnFail": false,
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_finish_send'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({p:$json}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "008d1e44-7811-44f8-8d9d-e025afffea66",
+      "name": "Persist Send Outcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1968,
+        2400
+      ],
+      "retryOnFail": false,
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_process_events'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "0ac5ae32-c760-48c3-93e7-b1a68009980c",
+      "name": "Apply Status and Reply Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        2400
+      ],
+      "retryOnFail": false,
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ (() => { const u = $('Supabase API Configuration').first().json.supabaseUrl; if (!/^https:\\/\\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(u) || u.includes('YOUR-PROJECT')) throw new Error('Set your Supabase project URL in Supabase API Configuration'); return u + '/rest/v1/rpc/eb_outreach_maintenance'; })() }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "0501bdb2-cd66-450d-884e-627d77f35966",
+      "name": "Recover Queue and Complete Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        288,
+        2400
+      ],
+      "retryOnFail": false,
+      "notes": "Supabase Data API RPC using native Supabase API credential (project URL + secret key). No Postgres connection. Atomic transaction stays inside Supabase. Do not enable automatic retries.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Paste your Supabase project URL here. The API key belongs only in n8n credentials.\nconst supabaseUrl = 'https://lreolnewuapcurpskqwr.supabase.co';\nconst route = $('Campaign API').isExecuted ? 0\n  : $('Upload Contacts').isExecuted ? 1\n  : $('Verified WASender Events').isExecuted ? 2\n  : $('Every 15 Seconds').isExecuted ? 3 : -1;\nif (route < 0) throw new Error('Unsupported workflow entry point');\nreturn $input.all().map(item => ({...item,json:{...item.json,supabaseUrl:supabaseUrl.replace(/\\/+$/,''),supabaseRoute:route}}));\n"
+      },
+      "id": "a01ef85b-7e29-4197-bd19-31f8f4660144",
+      "name": "Supabase API Configuration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        1600
+      ],
+      "notes": "Edit only supabaseUrl. Never paste the API key here. Original request body, query and uploaded binary are preserved. Each trigger executes independently."
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "={{ $json.supabaseRoute }}"
+      },
+      "id": "74ab0f8c-346f-4bab-9e36-3b911fad3806",
+      "name": "Route API and Worker",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -352,
+        1600
+      ],
+      "notes": "0 Campaign API; 1 upload; 2 WASender event; 3 scheduled worker."
+    }
+  ],
+  "connections": {
+    "Validate API Request": {
+      "main": [
+        [
+          {
+            "node": "Request Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Valid": {
+      "main": [
+        [
+          {
+            "node": "Execute Campaign Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Campaign JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Database Error": {
+      "main": [
+        [
+          {
+            "node": "Return Campaign JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Upload": {
+      "main": [
+        [
+          {
+            "node": "Upload Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Valid": {
+      "main": [
+        [
+          {
+            "node": "CSV or Excel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Import JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CSV or Excel": {
+      "main": [
+        [
+          {
+            "node": "Read CSV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Contacts": {
+      "main": [
+        [
+          {
+            "node": "Rows Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Excel": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows Valid": {
+      "main": [
+        [
+          {
+            "node": "Import Valid Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Import JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Import Error": {
+      "main": [
+        [
+          {
+            "node": "Return Import JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Provider Events": {
+      "main": [
+        [
+          {
+            "node": "Event Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Valid": {
+      "main": [
+        [
+          {
+            "node": "Persist Events and Apply Opt Outs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Provider JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge Committed Events": {
+      "main": [
+        [
+          {
+            "node": "Return Provider JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp via WASender": {
+      "main": [
+        [
+          {
+            "node": "Classify Provider Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Campaign API": {
+      "main": [
+        [
+          {
+            "node": "Supabase API Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Campaign Action": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Database Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Contacts": {
+      "main": [
+        [
+          {
+            "node": "Supabase API Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Valid Contacts": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Import Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verified WASender Events": {
+      "main": [
+        [
+          {
+            "node": "Supabase API Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Events and Apply Opt Outs": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Committed Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 15 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Supabase API Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim One Eligible Message": {
+      "main": [
+        [
+          {
+            "node": "Final Suppression and State Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Suppression and State Check": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp via WASender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Provider Outcome": {
+      "main": [
+        [
+          {
+            "node": "Persist Send Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Status and Reply Events": {
+      "main": [
+        [
+          {
+            "node": "Claim One Eligible Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recover Queue and Complete Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Apply Status and Reply Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Setup and Validation": {
+      "main": [
+        [
+          {
+            "node": "Validate Contact and Template Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase API Configuration": {
+      "main": [
+        [
+          {
+            "node": "Route API and Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route API and Worker": {
+      "main": [
+        [
+          {
+            "node": "Validate API Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Provider Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recover Queue and Complete Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "UTC",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 120,
+    "callerPolicy": "none",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed"
+  },
+  "active": false
+}

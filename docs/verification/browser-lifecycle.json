@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "checks": [
+    "Finished campaign updates automatically within the active polling interval; no Start/Stop/Resume controls",
+    "Delete succeeds once even if its successful backend response is lost; duplicate clicks do not issue another write",
+    "Campaign with an uncertain message outcome deletes on the first click"
+  ]
+}

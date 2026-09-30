@@ -22,3 +22,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Private runtime state and credentials
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-*
+*.db
+**/eightbit-outreach-private/
+**/test-private/
+**/sessions/
+**/config.php
+*.pem
+*.key

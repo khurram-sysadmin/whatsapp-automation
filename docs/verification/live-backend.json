@@ -1,0 +1,13 @@
+{
+  "date": "2026-09-30",
+  "migration_applied": true,
+  "completion_trigger_installed": true,
+  "lifecycle_api_installed": true,
+  "sending_worker_unchanged": true,
+  "rolled_back_live_lifecycle_tests_passed": true,
+  "test_data_removed": true,
+  "n8n_completed_stop_execution": "5903",
+  "n8n_completed_stop_success": true,
+  "website_update_uploaded": true,
+  "public_bundle_matches_release": true
+}

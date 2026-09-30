@@ -1,0 +1,17 @@
+EightBit WhatsApp Outreach - Campaign Fix
+
+The live Supabase backend fix is already applied. The same n8n workflow remains in use, with its existing credentials and sending logic.
+
+Upload WhatsApp-Automation-Campaign-Fix.zip into the document root for wamarketing.eightbitsolutions.com. Extract it there and overwrite the public website files. Keep your existing private eightbit-outreach-private folder, admin account and saved connection settings. Do not upload the backend or tests directories.
+
+Reload with Ctrl+Shift+R after uploading. No credential reentry or database setup is needed.
+
+Completed campaigns finish automatically after their last queued/leased/dispatching message reaches a final outcome. Failed or uncertain outcomes remain recorded; Completed describes the finished sending queue, not delivery success. Completed campaigns show no Start, Stop or Resume controls. To send again, create a new campaign.
+
+An older Stop/Pause/Resume request for a completed campaign returns success and preserves Completed. A new Start request for a completed campaign is rejected by the backend.
+
+Delete archives the campaign immediately from the dashboard while preserving message and delivery audit records. Uncertain outcomes no longer block archiving. Repeated deletion is safe. A running campaign with pending messages must still be paused or stopped first. If a delete response is lost, the page checks whether deletion already succeeded instead of falsely reporting failure. Older list refreshes cannot restore a campaign after deletion.
+
+Active campaign details refresh every five seconds. Completed progress shows 100%, while delivery/failure metrics retain their actual values.
+
+Verification: production build; 18 existing browser regression checks; 11 database lifecycle checks; 3 focused browser checks. Live SQL lifecycle checks passed inside a rolled-back transaction, leaving no test data. A live n8n completed-campaign Stop test returned success with status completed. No WhatsApp messages were sent for this repair. Subsequent 2026-09-30 verification confirmed the public website references index-D_uxLgXs.js and the asset bytes match this release; this does not assert every authenticated UI action has been rechecked live.

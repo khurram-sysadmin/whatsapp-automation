@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "scope": "Local PHP + SQL-backed upstream. No external WhatsApp delivery.",
+  "checks": [
+    "Old localStorage auth does not grant access",
+    "Server-side login; wrong password rejected",
+    "HttpOnly SameSite session cookie",
+    "Asia/Karachi default",
+    "Invalid contact file cannot advance or create campaign",
+    "Create + multipart XLSX import + duplicate click protection",
+    "Launch queues messages; pause/resume/stop reflect backend",
+    "Backend deletion confirmation, cancel, deletion and list refresh",
+    "Dashboard refresh after deletion",
+    "All direct routes and refresh",
+    "Missing/null/numeric backend fields render safely",
+    "Malformed backend response retains shell and recoverable error",
+    "API unavailable retains shell",
+    "Mobile layout no horizontal overflow",
+    "Invalid UUID, missing CSRF and cross-origin rejected server-side",
+    "Password change invalidates both existing sessions",
+    "Old password rejected; new password works",
+    "No browser secrets/direct n8n requests and no uncaught runtime errors"
+  ]
+}
