@@ -384,26 +384,48 @@ td {
   color: #e54b2d;
 }
 .v2-auth {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100svh;
+  background: #f5f4f2;
+  padding: 32px 40px 20px;
+}
+.v2-auth-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) minmax(300px, 440px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
   align-items: center;
-  gap: 70px;
-  padding: 70px;
-  max-width: 1400px;
+  gap: 96px;
+  max-width: 1080px;
   margin: auto;
   width: 100%;
-  background: radial-gradient(ellipse at 12% 12%, #ffede6 0, transparent 46%), #f5f4f2;
+  padding: 24px 0;
+}
+.v2-auth-intro {
+  max-width: 470px;
+}
+.v2-auth-intro > div:first-child {
+  margin-left: -28px;
+  margin-bottom: 42px;
+}
+.v2-auth-intro .v2-auth-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.8px;
+  color: #e54b2d;
+  margin: 0 0 16px;
 }
 .v2-auth-intro h1 {
-  font-size: 44px;
-  line-height: 1.2;
+  font-size: 48px;
+  line-height: 1.13;
   letter-spacing: -1.5px;
   font-weight: 700;
-  margin: 40px 0 20px;
+  margin: 0 0 22px;
 }
 .v2-auth-intro p {
   color: #71717a;
-  line-height: 1.9;
+  line-height: 1.75;
+  font-size: 15px;
   max-width: 430px;
 }
 .v2-auth-steps {
@@ -465,8 +487,20 @@ td {
   outline-offset: 3px;
 }
 .v2-auth-form {
-  padding: 35px;
-  box-shadow: 0 12px 40px #30201508;
+  padding: 36px;
+  border-color: #e4e4e7;
+  box-shadow: 0 8px 28px #18181b05;
+}
+.v2-auth-footer {
+  text-align: center;
+  color: #71717a;
+  font-size: 12px;
+  padding: 20px 0 0;
+}
+.v2-auth-footer span { margin: 0 8px; }
+.v2-auth input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #fafafa inset;
+  -webkit-text-fill-color: #18181b;
 }
 .v2-auth-form form > .v2-primary {
   width: 100%;
@@ -544,9 +578,10 @@ td {
   .v2-kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .v2-auth {
-    gap: 35px;
-    padding: 35px;
+  .v2-auth-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+    gap: 48px;
+    padding: 32px 0;
   }
   .v2-auth-intro h1 {
     font-size: 36px;
@@ -594,15 +629,19 @@ td {
   .v2-card {
     padding: 18px;
   }
-  .v2-auth {
+  .v2-auth-layout {
     grid-template-columns: 1fr;
-    padding: 28px;
+    padding: 16px 0;
     gap: 28px;
   }
   .v2-auth-intro h1 {
-    font-size: 30px;
-    margin: 20px 0;
+    font-size: 32px;
+    margin: 0 0 14px;
   }
+  .v2-auth { padding: 24px 20px 16px; }
+  .v2-auth-intro > div:first-child { margin-bottom: 22px; }
+  .v2-auth-intro .v2-auth-eyebrow { margin-bottom: 12px; }
+  .v2-auth-intro > p:not(.v2-auth-eyebrow) { font-size: 14px; }
   .v2-auth-steps {
     display: none;
   }

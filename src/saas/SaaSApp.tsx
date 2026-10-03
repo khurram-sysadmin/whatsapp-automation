@@ -1980,12 +1980,14 @@ function Auth({
   };
   return (
     <div className="v2-auth">
+      <main className="v2-auth-layout">
       <section className="v2-auth-intro">
         <EightbitLogo size="lg" />
+        <p className="v2-auth-eyebrow">WHATSAPP OUTREACH</p>
         <h1>
-          Your company.
+          Your outreach.
           <br />
-          Your WhatsApp connections.
+          One workspace.
         </h1>
         <p>
           Organize contacts, send campaigns and manage conversations from one
@@ -2112,6 +2114,8 @@ function Auth({
           </button>
         </div>
       </section>
+      </main>
+      <footer className="v2-auth-footer">EightBit Solutions <span aria-hidden="true">·</span> WhatsApp Outreach</footer>
     </div>
   );
 }
