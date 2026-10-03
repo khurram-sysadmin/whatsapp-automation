@@ -1,25 +1,11 @@
 # SaaS v2 upgrade
 
-Follow `upgrade-guide.md` in its strict order: Supabase foundation, n8n backend, frontend, partner integration, cutover. `contract.md` freezes the backend contract. Existing v1 routes, functions and sender remain operational.
+Foundation and owner linking are installed and verified. The user approved separate private customer queues and multiple customer-key WASender connections per company. n8n and Supabase remain operator-managed. See approved-amendments.md.
 
-Owner email: khurram@eightbitsolutions.com. Provider mode: pending_partner.
+The backend review package is ready; runtime SQL and workflow are NOT installed. The single proposed workflow has 92 nodes, preserving all original 41 nodes and connections. The new customer schedule is disabled. Existing v1 production remains current.
 
-## Foundation
+Review runtime-review.md, the isolated-storage migration, supabase-v2-runtime.sql and the updated workflow JSON before installation, as required by upgrade-guide.md. Local tests cover all 31 actions, tenant/role/key boundaries, completion and deletion retry; workflow validation, legacy regressions and build pass. Actual Vault encryption, live concurrent transactions, provider delivery and n8n execution still need operator validation after review approval.
 
-The exact guide SQL is in `backend/supabase/v2-foundation/`. Identity and private-table migrations were approved and applied to the live Supabase project on 2026-10-03. The user created the real owner Auth account privately, then explicitly approved workspace ownership and existing data linking. The actual-owner backfill was applied; the `.template.sql` version remains reusable. Never substitute a mock UUID in production.
+customer-WASender-onboarding.md specifies the future step-by-step wizard. Frontend v2 is not implemented or deployed. Customer keys are per session; partner provisioning remains pending and is not required for this customer-supplied-key path. Legacy history remains intact in v1 storage.
 
-Step 8 and extended live verification passed: owner profile/member/subscription exist, and no legacy campaigns, contacts or messages are missing workspace links or master-contact links. All nine v1 function definitions still match the preflight. See `live-owner-verification.json`. The guide imports the existing legacy session with status connected; this imported status is not evidence of a fresh provider connection check.
-
-`npm run test:v2-foundation` verifies the migrations, legacy backfill, isolation and all nine existing v1 function definitions locally. Supabase Vault is unavailable in the local test engine; live preflight confirmed the extension is available. See `local-foundation-verification.json`.
-
-## Required review gate
-
-Prepare `supabase-v2-runtime.sql` and the updated single n8n workflow JSON only after foundation checks. Provide both for review before executing or importing. Do not cut over the frontend before the backend contract is verified.
-
-## Dispatch compatibility issue to resolve before runtime approval
-
-The preserved v1 sender reads the shared campaigns/messages tables. A local reproduction confirmed both `claim_next` and `begin_send` accept a message assigned to a different workspace/session. The existing workflow send node uses one fixed provider credential. JWT validation on the v2 API does not protect the independent legacy scheduled sender. See `dispatch-compatibility-report.json` and run `node tests/v2-dispatch-compatibility.mjs` (no external calls).
-
-The guide prohibits replacing v1 functions but also expects v2 work in shared tables. Asked the user to choose an explicit correction: separate private v2 campaign/queue storage, or narrowly scoped legacy routing isolation. No design exception or runtime change has been applied. Do not activate v2 sending before this is resolved and reviewed.
-
-Git changes do not deploy the dashboard, database or n8n workflow. `progress.json` records which phases actually ran.
+Git push is a source checkpoint, not production deployment. progress.json records installed versus prepared phases.

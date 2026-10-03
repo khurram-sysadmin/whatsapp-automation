@@ -3,7 +3,7 @@
   "date": "2026-10-03",
   "branch": "upgrade/saas-v2-foundation",
   "baseline_commit": "8f2f7dfff1607dfa4940b5efd91ace236b1da4e8",
-  "phase": "foundation_complete_backend_dispatch_design_decision_pending",
+  "phase": "backend_review_package_ready",
   "owner_email": "khurram@eightbitsolutions.com",
   "foundation_applied": true,
   "foundation_verified": true,
@@ -16,6 +16,10 @@
   "runtime_sql_applied": false,
   "workflow_v2_imported": false,
   "frontend_cutover": false,
-  "provider_mode": "pending_partner",
-  "approval_gate": "Guide Step 10 and final Next action: review runtime SQL and workflow JSON before running/importing"
+  "provider_mode": "customer_api_key",
+  "approval_gate": "Guide Step 10 and final Next action: review runtime SQL and workflow JSON before running/importing",
+  "storage_mode": "isolated_v2_queue",
+  "multiple_connections_per_company": true,
+  "customer_key_decision_approved": true,
+  "frontend_wizard_implemented": false
 }

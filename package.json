@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test:lifecycle": "node tests/lifecycle.mjs",
-    "test:v2-foundation": "node tests/v2-foundation.mjs"
+    "test:v2-foundation": "node tests/v2-foundation.mjs",
+    "test:v2-runtime": "node tests/v2-runtime.mjs",
+    "test:v2-workflow": "node tests/v2-workflow.mjs"
   },
   "dependencies": {
     "@types/papaparse": "^5.5.2",

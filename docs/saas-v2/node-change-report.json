@@ -1,0 +1,272 @@
+{
+  "baselineNodesUnchanged": true,
+  "baselineConnectionsUnchanged": true,
+  "baselineNodes": 41,
+  "addedNodes": [
+    {
+      "name": "V2 Return JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "purpose": "Return JSON"
+    },
+    {
+      "name": "V2 Safe RPC Response",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Returns only the standard response envelope; never echo raw database or transport errors."
+    },
+    {
+      "name": "V2 Execute Action",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Execute Action"
+    },
+    {
+      "name": "V2 API Endpoint",
+      "type": "n8n-nodes-base.webhook",
+      "purpose": "API Endpoint"
+    },
+    {
+      "name": "V2 API Require Bearer",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Bearer syntax check before any database call."
+    },
+    {
+      "name": "V2 API Bearer Present",
+      "type": "n8n-nodes-base.if",
+      "purpose": "API Bearer Present"
+    },
+    {
+      "name": "V2 API Validate Supabase User",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "API Validate Supabase User"
+    },
+    {
+      "name": "V2 API Verified Identity",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Derive userId only from successful Supabase Auth response. JWT does not enter RPC request bodies."
+    },
+    {
+      "name": "V2 API User Verified",
+      "type": "n8n-nodes-base.if",
+      "purpose": "API User Verified"
+    },
+    {
+      "name": "V2 Connection Verification Needed",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Connection Verification Needed"
+    },
+    {
+      "name": "V2 Authorize Connection",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Authorize Connection"
+    },
+    {
+      "name": "V2 Authorized Connection Context",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Authorizes company and role before contacting WASender; never uses a global provider credential."
+    },
+    {
+      "name": "V2 Connection Authorized",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Connection Authorized"
+    },
+    {
+      "name": "V2 Verify WASender Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Verify WASender Status"
+    },
+    {
+      "name": "V2 Status Context",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Status Context"
+    },
+    {
+      "name": "V2 Status Verified",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Status Verified"
+    },
+    {
+      "name": "V2 Verify WASender Phone",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Verify WASender Phone"
+    },
+    {
+      "name": "V2 Verified Provider Proof",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Derives the connected phone from WASender /api/user, never from browser input."
+    },
+    {
+      "name": "V2 Provider Proof Valid",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Provider Proof Valid"
+    },
+    {
+      "name": "V2 Import Endpoint",
+      "type": "n8n-nodes-base.webhook",
+      "purpose": "Import Endpoint"
+    },
+    {
+      "name": "V2 Import Require Bearer",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Bearer syntax check before any database call."
+    },
+    {
+      "name": "V2 Import Bearer Present",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Import Bearer Present"
+    },
+    {
+      "name": "V2 Import Validate Supabase User",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Import Validate Supabase User"
+    },
+    {
+      "name": "V2 Import Verified Identity",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Derive userId only from successful Supabase Auth response. JWT does not enter RPC request bodies."
+    },
+    {
+      "name": "V2 Import User Verified",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Import User Verified"
+    },
+    {
+      "name": "V2 Validate File",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Validate File"
+    },
+    {
+      "name": "V2 File Valid",
+      "type": "n8n-nodes-base.if",
+      "purpose": "File Valid"
+    },
+    {
+      "name": "V2 Authorize Import",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Authorize Import"
+    },
+    {
+      "name": "V2 Authorized Import Context",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Authorized Import Context"
+    },
+    {
+      "name": "V2 Import Authorized",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Import Authorized"
+    },
+    {
+      "name": "V2 CSV File",
+      "type": "n8n-nodes-base.if",
+      "purpose": "CSV File"
+    },
+    {
+      "name": "V2 Read CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "purpose": "Read CSV"
+    },
+    {
+      "name": "V2 Read XLSX",
+      "type": "n8n-nodes-base.extractFromFile",
+      "purpose": "Read XLSX"
+    },
+    {
+      "name": "V2 Normalize Import",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Reuse existing spreadsheet validation, preserve first_name columns, map API fields to camelCase."
+    },
+    {
+      "name": "V2 Rows Valid",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Rows Valid"
+    },
+    {
+      "name": "V2 Provider Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "purpose": "Provider Webhook"
+    },
+    {
+      "name": "V2 Verify Webhook Signature",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Verify Webhook Signature"
+    },
+    {
+      "name": "V2 Verified Webhook Context",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Verified Webhook Context"
+    },
+    {
+      "name": "V2 Webhook Authorized",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Webhook Authorized"
+    },
+    {
+      "name": "V2 Normalize Provider Events",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Normalize Provider Events"
+    },
+    {
+      "name": "V2 Events Valid",
+      "type": "n8n-nodes-base.if",
+      "purpose": "Events Valid"
+    },
+    {
+      "name": "V2 Commit Provider Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Commit Provider Events"
+    },
+    {
+      "name": "V2 Customer Queue Every 15 Seconds",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "purpose": "REVIEW GATE: disabled until runtime/schema/provider checks pass. This is in the same workflow; never duplicate an active sender."
+    },
+    {
+      "name": "V2 Recover Customer Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Recover Customer Queue"
+    },
+    {
+      "name": "V2 Claim Per Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Claim Per Session"
+    },
+    {
+      "name": "V2 Claim Items",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Claim Items"
+    },
+    {
+      "name": "V2 Final Customer State Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Final Customer State Check"
+    },
+    {
+      "name": "V2 Verified Send Items",
+      "type": "n8n-nodes-base.code",
+      "purpose": "Verified Send Items"
+    },
+    {
+      "name": "V2 Send Via Customer Key",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Send Via Customer Key"
+    },
+    {
+      "name": "V2 Classify Customer Send",
+      "type": "n8n-nodes-base.code",
+      "purpose": "No automatic send retries; persist only allowlisted response fields, never raw provider bodies."
+    },
+    {
+      "name": "V2 Commit Customer Send Outcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Commit Customer Send Outcome"
+    }
+  ],
+  "totalNodes": 92,
+  "settingsChanges": {
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none"
+  },
+  "requiredCredential": "Supabase SaaS Backend: HTTP Header Auth header apikey, value operator Supabase sb_secret key",
+  "requiredVariable": "EB_SUPABASE_PUBLISHABLE_KEY: operator publishable key",
+  "customerWorkerDisabled": true,
+  "reviewBeforeImport": true
+}
