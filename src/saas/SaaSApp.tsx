@@ -5,6 +5,7 @@ import {
   configured,
   config,
   continueWithGoogle,
+  OutreachError,
   count,
   importContacts,
   label,
@@ -617,7 +618,18 @@ export default function SaaSApp() {
   }, []);
   const loadBootstrap = useCallback(async (preferred?: string) => {
     const identity = authIdentity.current;
-    const b = await action("bootstrap");
+    let b: Row;
+    try {
+      b = await action("bootstrap");
+    } catch (error) {
+      if (error instanceof OutreachError && error.code === "UNAUTHORIZED") {
+        setAuthenticated(false);
+        setBootstrap(null);
+        setData({});
+        setWorkspace("");
+      }
+      throw error;
+    }
     if (identity !== authIdentity.current) return;
     setBootstrap(b);
     const allowed = rows(b.workspaces);
