@@ -2,42 +2,42 @@
   "date": "2026-10-03",
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
-  "packageSha256": "f75b6a15d28977fd3ef6c65e51902b9708f8237f2d2d5f784456c655c517f2ec",
+  "packageSha256": "4545536ad0ed0c39a4d3bde834a4316fa4175f445bea7436c18c0e1a5abe5ef9",
   "productionUploaded": false,
   "customerSenderEnabled": false,
   "providerTesting": "Deferred by user",
   "entries": [
     {
-      "path": "index.html",
-      "sha256": "f593f932dd1c357b9a395e75a5720bd3e91ff42a3a7e054849135e466adf5bf3"
+      "sha256": "f73c8a2aeb6f8eec78c76424ee409d60ae9c2e60e81e075bcd94538e6bd80f76",
+      "path": "index.html"
     },
     {
-      "path": ".htaccess",
-      "sha256": "287e9e6a7925614951f4b4f858c364684e74606b56ecd25a5b9fc9bb5dcf2ce3"
+      "sha256": "287e9e6a7925614951f4b4f858c364684e74606b56ecd25a5b9fc9bb5dcf2ce3",
+      "path": ".htaccess"
     },
     {
-      "path": "favicon.svg",
-      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66"
+      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
+      "path": "favicon.svg"
     },
     {
-      "path": "icons.svg",
-      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a"
+      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+      "path": "icons.svg"
     },
     {
-      "path": "logo.jpg",
-      "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8"
+      "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8",
+      "path": "logo.jpg"
     },
     {
-      "path": "assets/index-LwOFQ5Jl.js",
-      "sha256": "0fcac06f3af461189ac6a1f62f16c451b0cc86c2f7c6822083e2bc03a8868565"
+      "sha256": "63941c79159ad7a490b93de1b54627141694c97ac6061f2fa23ce70738a0afa9",
+      "path": "assets/index-CKpf7rML.css"
     },
     {
-      "path": "assets/index-yzE8cz8k.css",
-      "sha256": "c52fadecb4e5a22be23c097e0eb48132c031e3aa119409340f9de092cd749ee7"
+      "sha256": "21889d237abb390d8d106baf439e62a4ca8c687b10928b8d9cd1ed8def7efa3d",
+      "path": "assets/index-PLZ35jMs.js"
     },
     {
-      "path": "assets/logo-sbDsCuRb.jpg",
-      "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8"
+      "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8",
+      "path": "assets/logo-sbDsCuRb.jpg"
     }
   ],
   "verification": "See docs/saas-v2/frontend-validation.md",

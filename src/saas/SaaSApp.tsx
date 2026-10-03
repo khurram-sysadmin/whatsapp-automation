@@ -33,6 +33,16 @@ import {
   Inbox,
 } from "lucide-react";
 import "./saas.css";
+export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
+  return (
+    <div className="v2-welcome v2-welcome-loading" role="status">
+      <span className="v2-welcome-symbol" aria-hidden="true"><MessageSquare size={22} /></span>
+      <h1 className="v2-welcome-line">Welcome to EightBit.</h1>
+      <p className="v2-welcome-line">{checking ? "Checking your sign-in…" : "Opening your workspace…"}</p>
+      <p className="v2-welcome-line v2-muted">Your contacts, campaigns and conversations, together.</p>
+    </div>
+  );
+}
 function useDialogFocus(open: boolean, onClose: () => void, busy: boolean) {
   const state = useRef({ onClose, busy });
   useEffect(() => {
@@ -850,7 +860,8 @@ export default function SaaSApp() {
   if (loadingAuth)
     return (
       <div className="v2-onboarding" role="status">
-        Checking your session…
+        <EightbitLogo />
+        <OnboardingWelcome checking />
       </div>
     );
   if (!authenticated || recovery)
@@ -880,13 +891,14 @@ export default function SaaSApp() {
             </button>
           </section>
         ) : (
-          <p role="status">Loading your company…</p>
+          <OnboardingWelcome />
         )}
       </div>
     );
   if (!rows(bootstrap.workspaces).length)
     return (
       <Company
+        fullName={label(bootstrap.user?.fullName)}
         onCreated={(id) =>
           void loadBootstrap(id).catch((e) => setError(errorText(e)))
         }
@@ -2027,6 +2039,7 @@ function Auth({
           </button>
           <div className="v2-auth-divider"><span>or continue with email</span></div>
         </>}
+        {googleBusy && <p className="v2-google-guidance v2-welcome-line" role="status">Taking you to Google. Choose your account to continue.</p>}
         {mode === "reset" && !hasSession ? (
           <p className="v2-notice" role="status">
             Open the password reset link from your email. If it has expired,
@@ -2119,17 +2132,27 @@ function Auth({
     </div>
   );
 }
-function Company({ onCreated }: { onCreated: (id: string) => void }) {
+export function Company({ onCreated, fullName = "" }: { onCreated: (id: string) => void; fullName?: string }) {
   const [companyName, setCompanyName] = useState(""),
     [timezone, setTimezone] = useState(config.timezone),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [detailStage, setDetailStage] = useState<"company" | "timezone" | "next">("company");
+  const guidance = busy ? "Creating your company workspace…"
+    : detailStage === "timezone" ? "Now choose your time zone. Your campaign sending windows use this setting."
+    : detailStage === "next" ? "Your WhatsApp connection comes next. You can finish that step whenever you’re ready."
+    : "Start with your company name. This is how your team will recognize the workspace.";
   return (
-    <div className="v2-onboarding">
+    <div className="v2-onboarding v2-company-onboarding">
       <EightbitLogo />
+      <header className="v2-welcome">
+        <p className="v2-eyebrow v2-welcome-line">WELCOME TO EIGHTBIT OUTREACH</p>
+        <h1 className="v2-welcome-line">{fullName.trim() ? `Welcome, ${fullName.trim().split(/\s+/)[0]}.` : "Your outreach starts here."}</h1>
+        <p className="v2-welcome-line">Let’s make this workspace yours.</p>
+      </header>
       <section className="v2-card">
-        <p className="v2-eyebrow">Company → WhatsApp → Test → Ready</p>
-        <h1>Set up your company</h1>
+        <p className="v2-company-step"><span aria-hidden="true">01</span> Company details <span className="v2-muted">Step 1 of 4</span></p>
+        <h2>Set up your company</h2>
         <p>
           Your numbers, campaigns and contacts stay together in this workspace.
         </p>
@@ -2151,18 +2174,23 @@ function Company({ onCreated }: { onCreated: (id: string) => void }) {
             }
           }}
         >
+          <div onBlur={() => { if (companyName.trim()) setDetailStage("timezone"); }}>
           <Field
             name="Company name"
             value={companyName}
-            onChange={setCompanyName}
+            onChange={(value) => { setCompanyName(value); if (!value.trim()) setDetailStage("company"); }}
             required
           />
+          </div>
+          <div onBlur={() => { if (companyName.trim() && timezone.trim()) setDetailStage("next"); }}>
           <Field
             name="Timezone"
             value={timezone}
-            onChange={setTimezone}
+            onChange={(value) => { setTimezone(value); if (!value.trim()) setDetailStage(companyName.trim() ? "timezone" : "company"); }}
             required
           />
+          </div>
+          <p key={busy ? "saving" : detailStage} className="v2-onboarding-guidance v2-welcome-line" role="status" aria-live="polite" aria-atomic="true">{guidance}</p>
           {error && <p role="alert">{error}</p>}
           <button className="v2-primary" disabled={busy}>
             {busy ? "Creating…" : "Continue to WhatsApp"}

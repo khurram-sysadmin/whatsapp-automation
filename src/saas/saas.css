@@ -895,3 +895,44 @@ td {
     min-height: 44px;
   }
 }
+
+/* Short entrance cues; no delays to authentication or workspace creation. */
+@keyframes v2-welcome-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.v2-welcome { text-align: center; max-width: 560px; }
+.v2-welcome h1 { font-size: 30px; line-height: 1.25; letter-spacing: -.8px; font-weight: 600; margin: 10px 0; }
+.v2-welcome > p { color: #71717a; line-height: 1.65; }
+.v2-welcome > .v2-eyebrow { color: #e54b2d; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; }
+.v2-welcome-line { animation: v2-welcome-enter .4s ease-out both; }
+.v2-welcome > .v2-welcome-line:nth-child(2) { animation-delay: .08s; }
+.v2-welcome > .v2-welcome-line:nth-child(3) { animation-delay: .16s; }
+.v2-welcome > .v2-welcome-line:nth-child(4) { animation-delay: .24s; }
+.v2-welcome-symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #ffebe5;
+  color: #e54b2d;
+  margin-bottom: 12px;
+}
+.v2-welcome-loading { padding: 24px 0; }
+.v2-company-onboarding { gap: 22px; padding: 40px 24px; }
+.v2-company-onboarding .v2-card { padding: 30px; }
+.v2-company-onboarding form > .v2-primary { width: 100%; min-height: 44px; }
+.v2-company-step { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-bottom: 20px; }
+.v2-company-step > span:first-child { color: #e54b2d; background: #ffebe5; padding: 6px 8px; border-radius: 7px; font-weight: 600; }
+.v2-company-step > .v2-muted { margin-left: auto; font-size: 11px; }
+.v2-onboarding-guidance { padding: 12px 14px; margin: 20px 0; border-left: 2px solid #ff5533; background: #fff8f4; color: #52525b; font-size: 13px; line-height: 1.65; min-height: 66px; }
+.v2-google-guidance { font-size: 12px; line-height: 1.65; color: #71717a; margin-bottom: 16px; }
+@media (max-width: 600px) {
+  .v2-company-onboarding { padding: 26px 18px; gap: 18px; }
+  .v2-company-onboarding .v2-card { padding: 22px; }
+  .v2-welcome h1 { font-size: 25px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-welcome-line { animation: none; opacity: 1; transform: none; }
+}
