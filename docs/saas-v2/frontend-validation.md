@@ -56,3 +56,5 @@ Authentication recovery follow-up: if initial workspace loading reports an unaut
 ## Unified authentication theme — 2026-10-03
 
 Replaced the bounded gradient background with the dashboard's neutral #f5f4f2 across the full viewport. Constrained only the inner layout to1080px, balanced the branding/form columns, shortened the headline, matched borders/typography/button colors and neutralized browser autofill tint. Added a modest product footer and adjusted phone/tablet spacing. Login/signup and mode switching reviewed at desktop1280, phone390 and tablet820; no horizontal overflow. Screenshots: login-theme-balanced.png, signup-theme-balanced.png and signup-theme-mobile.png. Production build passes. Authentication/backend behavior and the Google setup requirement are unchanged. New ZIP rebuilt; production upload not performed.
+
+Google follow-up2026-10-03: operator completed setup; public Auth settings Google enabled verified and preview button reached Google account chooser with expected callback/return paths. Private account selection/consent and final dashboard return still pending. No secrets or account-chooser evidence committed.

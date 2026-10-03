@@ -41,5 +41,5 @@
     }
   ],
   "verification": "See docs/saas-v2/frontend-validation.md",
-  "googleProviderEnabled": false
+  "googleProviderEnabled": true
 }
