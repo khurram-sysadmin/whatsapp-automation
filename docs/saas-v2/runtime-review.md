@@ -1,31 +1,28 @@
-# Backend review and installation gate
+# Installed SaaS backend and review status
 
-Prepared 2026-10-03. NOT installed. Current production remains v1. The user guide says: “Do not immediately execute it.” Review this package before SQL execution or n8n import.
+Updated 2026-10-03. The user approved the review package before installation. This supersedes the earlier prepared-only checkpoint. Production frontend remains v1; the new local frontend reads the installed backend successfully.
 
-## Review files
-1. backend/supabase/v2-review/004-isolated-storage.sql — separate private customer campaign/message queue; no legacy rows moved.
-2. backend/supabase/v2-review/supabase-v2-runtime.sql — JWT-verified membership/roles, 31 public actions, worker leases, callbacks, completion and idempotency.
-3. backend/n8n/v2-review/eightbit-whatsapp-outreach-v2.json — one workflow, 92 nodes: original 41 preserved plus 51 additions. The new customer worker is disabled.
-4. docs/saas-v2/approved-amendments.md and customer-WASender-onboarding.md — approved contract exceptions and future customer wizard.
-5. docs/saas-v2/node-change-report.json and local verification reports — review evidence.
+## Installed components
 
-## What changed
-Each company can own multiple customer-key WhatsApp connections. Customer sends read only their claimed session's encrypted key. Supabase/n8n remain operator-managed. Separate v2 storage prevents the preserved legacy sender from claiming another company's messages. Original nine v1 function bodies and original workflow graph stay unchanged. Workflow execution persistence is disabled for all branches to keep bearer tokens and session keys out of stored runs. No frontend source changes or production cutover are included.
+- Supabase 004 isolated storage, complete runtime, 005 frontend contract and 006 session metadata applied. Six private queue tables have RLS and no browser-role read grants. All ten trusted wrappers are service_role only. Original nine v1 function hashes and v1 health remain unchanged.
+- Vault access is denied to browser roles. A nonfunctional rollback-only fixture verified real encryption/decryption and left no record. No customer keys were read. See live-runtime-verification.json and live-vault-verification.json.
+- Existing EightBit WhatsApp Outreach workflow biQP0tU694qWD8P9 published with 92 nodes: original 41 plus 51 additive nodes. The customer scheduler is disabled; v1 sender remains intact. Execution persistence is disabled to protect secret-bearing runs.
+- Reuses the saved Supabase account 2 credential (supabaseApi). No generic header credential, new operator secret or n8n variable is required. The publishable key used for JWT verification is public configuration. Customers never configure Supabase or n8n.
+- The corrected Execute Action expression compiles and authenticated reads work. Missing/invalid JWT is rejected and production OPTIONS/CORS checked. Generated full and additive files are templates, not a fresh export of live node identities.
+- Ten-page frontend and customer setup wizard built, visually reviewed and packaged. No production frontend upload has occurred.
 
-## Local verification
-All 31 public actions exercised; cross-company scope, roles, key routing, independent sessions, idempotency, immediate Completed, deletion retry, webhook deduplication and unknown-outcome protection passed. Original workflow graph and embedded Code syntax passed; XLSX expansion is bounded before parsing. Legacy lifecycle regression and frontend build passed. See runtime-local-verification.json and workflow-local-verification.json.
+## Contract and local verification
 
-PGlite uses a mock Vault and single database connection: real Vault encryption/permissions and concurrent database transactions are NOT proved. No real provider calls or test messages were sent; workflow has NOT been imported into n8n.
+The frozen 31 public actions remain intact. Every action is exercised locally, including company/role boundaries, multiple sessions, key routing, idempotency, immediate Completed, stale Stop, repeat archive, signed callbacks and unknown-outcome protection. Original graph and every v2 expression compile. Legacy lifecycle tests pass. See frontend-validation.md for the full test matrix.
 
-## Operator checklist after review approval
-- Take fresh live SQL/function and n8n snapshots. Compare original 41-node baseline against current live workflow; do not overwrite newer production edits.
-- Apply isolated storage before runtime, then reload PostgREST schema. Verify actual Vault schema/table/function access denies anon/authenticated/PUBLIC and never expose decrypted_secrets. Service-only wrappers must remain service-only.
-- Privately create/select n8n HTTP Header Auth credential “Supabase SaaS Backend”: header apikey, value the project's secret API key. Replace every CONFIGURE_SAAS_BACKEND_CREDENTIAL reference. Set EB_SUPABASE_PUBLISHABLE_KEY as the project's publishable key. Never put operator secrets in customer settings or browser code.
-- Import into the existing EightBit WhatsApp Outreach workflow, preserving its ID and old graph; do not create another active legacy sender. Keep the new customer schedule disabled initially.
-- Verify invalid JWT rejection BEFORE database writes, workspace membership and role boundaries, two companies/two connections, private callback signature handling and tenant-scoped suppression.
-- In real PostgreSQL use separate concurrent transactions to verify same-session exclusion, different-session progress, lock ordering and monthly quota reservations. Verify expired dispatch becomes unknown and never auto-resends.
-- Enter a real customer connection privately. Verify status/phone and signed callbacks, then explicitly authorize the recipient/message for one delivery test. Enable the new worker only after these checks.
-- Complete frontend v2/wizard only after backend contract verification. Current v1 history remains in v1; history migration and owner-number cutover need explicit planning. Stop/drain v1 before binding the same legacy owner number to v2 to avoid two independently paced queues.
+Local PGlite uses mocked Vault and one connection. Live rollback encryption and privilege checks supplement those tests, but do not prove independent concurrent transactions. The local workflow report's importedIntoN8n=false describes the test harness, not installation status.
+
+## Remaining activation checks
+
+The user explicitly deferred WASender connection, real delivery and callback testing. No new customer messages were sent. Keep customer scheduling disabled until real connection identity, signed callbacks, an authorized test send and concurrent lease/quota behavior are verified. Verify same-session exclusion, independent-session progress, lock ordering and quota reservations with separate real database transactions.
+
+Verify signup/email-reset roundtrips and operator SMTP before public signup. Team changes remain support-managed and billing has no payment checkout. V1 campaigns/messages remain in their original tables; plan history presentation and owner-number cutover before replacing production. Stop/drain v1 before binding the same owner number to v2 to avoid two independently paced queues.
 
 ## Rollback
-Disable new customer scheduling and new customer API writes; preserve the old v1 sender/routes. Keep callback/finish reconciliation available for in-flight messages. Do not reset unknown outcomes, delete customer data, drop audit history or remove Vault secrets during incident recovery. Restore the previous workflow graph only after recording/reconciling new in-flight work; preserve secret-safe logging settings. Git rollback alone does not roll back SQL or hosted n8n.
+
+Disable customer scheduling and writes while retaining callback/finish reconciliation for in-flight messages. Preserve the old v1 routes/sender and private site storage. Do not reset unknown outcomes, drop audit history, delete customer data or remove Vault secrets during recovery. Restoring Git alone does not roll back SQL or hosted n8n. Compare the current live graph before importing generated templates; never overwrite later edits blindly.

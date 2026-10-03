@@ -1,5 +1,9 @@
 # Deployment and operations
 
+## SaaS upgrade build
+
+For the 2026-10-03 Supabase Auth build, use [SaaS deployment instructions](docs/saas-v2/deployment.md) and the static SaaS release ZIP. It does not require PHP for the new frontend. Keep the existing PHP API and private folder for v1 and rollback. The new frontend has not been uploaded; customer sending remains disabled pending deferred testing. The instructions below describe the preserved v1 edition.
+
 ## Current deployment
 
 Domain: https://wamarketing.eightbitsolutions.com. HTTPS cPanel/Apache serves compiled Vite assets and executes PHP API scripts. PHP 8.1+ with curl, pdo_sqlite and mbstring is required. Node/npm is needed to build locally, not to serve the production frontend. Original Nginx-only Docker files are legacy and cannot execute this edition's PHP backend.

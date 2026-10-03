@@ -1,5 +1,13 @@
 # EightBit WhatsApp Outreach
 
+## SaaS upgrade checkpoint — 2026-10-03
+
+This branch builds the company dashboard with Supabase Auth, multiple customer WASender connections, and the existing n8n workflow. The hosted v2 backend is installed; the professional ten-page frontend is verified in the local preview and packaged for upload. The production frontend remains v1. Customer sending is disabled while the user defers provider testing.
+
+Start with [SaaS validation and remaining checks](docs/saas-v2/frontend-validation.md), [SaaS deployment](docs/saas-v2/deployment.md), [backend installation status](docs/saas-v2/runtime-review.md) and [frozen contract](docs/saas-v2/contract.md). Run the four `test:v2-*` scripts as well as lifecycle tests and build. The new static release is `releases/WhatsApp-Automation-SaaS-cPanel-ready.zip`; its manifest records final asset hashes. Customer settings contain no operator Supabase/n8n credentials.
+
+The following describes the preserved v1 production edition and its rollback files.
+
 Working WhatsApp campaign dashboard with React/TypeScript, private PHP authentication/proxy, one n8n workflow, Supabase persistence and WASender integration. This is the application at https://wamarketing.eightbitsolutions.com.
 
 ## Build and test

@@ -1,0 +1,5 @@
+SaaS upgrade static package: WhatsApp-Automation-SaaS-cPanel-ready.zip
+Read docs/saas-v2/deployment.md before uploading. This frontend has not yet been uploaded to production.
+Extract contents directly into the wamarketing.eightbitsolutions.com document root verified in cPanel Domains. Include hidden .htaccess. Preserve the existing api/ and external private folder for v1/rollback.
+The package contains public frontend files only. Backend installation is a separate operation and has already been approved/applied. Customer schedule stays disabled while provider tests are deferred. Resolve v1 history/cutover and remaining checks before activation.
+Hashes: releases/saas-v2-release-manifest.json. Verification: docs/saas-v2/frontend-validation.md.

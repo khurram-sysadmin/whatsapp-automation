@@ -2,11 +2,11 @@ DirectoryIndex index.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(dashboard|campaigns|contacts|templates|messages|replies|suppression|settings)/$ $1 [R=302,L]
+  RewriteRule ^(signup|login|forgot-password|reset-password|dashboard|campaigns|contacts|templates|messages|replies|suppression|settings|inbox|whatsapp-accounts|analytics|team|billing)/$ $1 [R=302,L]
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
-  RewriteRule ^(dashboard|campaigns|contacts|templates|messages|replies|suppression|settings)/?$ index.html [L]
+  RewriteRule ^(signup|login|forgot-password|reset-password|dashboard|campaigns|contacts|templates|messages|replies|suppression|settings|inbox|whatsapp-accounts|analytics|team|billing)/?$ index.html [L]
   RewriteRule ^[^/]+$ index.html [L]
 </IfModule>
 

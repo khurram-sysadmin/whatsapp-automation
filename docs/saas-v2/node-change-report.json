@@ -265,8 +265,8 @@
     "saveDataErrorExecution": "none",
     "saveDataSuccessExecution": "none"
   },
-  "requiredCredential": "Supabase SaaS Backend: HTTP Header Auth header apikey, value operator Supabase sb_secret key",
-  "requiredVariable": "EB_SUPABASE_PUBLISHABLE_KEY: operator publishable key",
+  "requiredCredential": "Existing operator Supabase account 2 (supabaseApi); credential reference only",
+  "requiredVariable": null,
   "customerWorkerDisabled": true,
   "reviewBeforeImport": true
 }

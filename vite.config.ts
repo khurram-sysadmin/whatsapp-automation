@@ -5,4 +5,5 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: './',
   plugins: [react()],
+  server:{watch:{ignored:['**/releases/**','**/docs/**','**/backend/**','**/*.zip']},proxy:{'/v2-api':{target:'https://n8n.eightbitsolutions.com',changeOrigin:true,rewrite:()=>'/webhook/eightbit-outreach/v2/api'},'/v2-import':{target:'https://n8n.eightbitsolutions.com',changeOrigin:true,rewrite:()=>'/webhook/eightbit-outreach/v2/import'}}},
 })

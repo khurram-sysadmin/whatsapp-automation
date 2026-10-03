@@ -1,5 +1,13 @@
 # Architecture and service map
 
+## SaaS upgrade — 2026-10-03
+
+The new frontend is built and reviewed at the local preview; the production frontend still uses v1. Supabase Auth supplies the user's JWT. n8n verifies it before calling service-only Supabase RPCs; database membership and roles scope every company action. Customers enter only their own WASender session keys through the dashboard. Multiple connections are supported; Vault holds their secrets, and each send uses the selected connection's key. The six private v2 queue tables are inaccessible to browser roles.
+
+The existing workflow `biQP0tU694qWD8P9` now has 92 nodes: 41 preserved v1 nodes and 51 v2 additions. It reuses the existing Supabase credential. The customer schedule is disabled; v1 sending remains unchanged. No second workflow was created. Separate v2 queues prevent v1 from claiming customer messages. V1 history remains in the original tables and dashboard; presentation and owner-number cutover are still pending.
+
+Current source remote: https://github.com/khurram-sysadmin/whatsapp-automation.git. See [current verification](saas-v2/frontend-validation.md), [deployment](saas-v2/deployment.md), [runtime](saas-v2/runtime-review.md), and `saas-v2/progress.json`. The map below documents the retained v1 edition.
+
 Updated: 2026-09-30. Product: EightBit WhatsApp Outreach / WhatsApp Automation. This is distinct from the ERPNext POS receipt automation and Carnivore voice agent.
 
 ## System boundaries

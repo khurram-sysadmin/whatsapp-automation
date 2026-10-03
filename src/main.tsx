@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import App from './saas/SaaSApp';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import './index.css';
 

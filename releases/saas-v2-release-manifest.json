@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-03",
+  "branch": "upgrade/saas-v2-foundation",
+  "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
+  "packageSha256": "ceb4fbcfb3e58fb46097141899c4e2d1f8c0f2806ee56b26ca4620025ea79868",
+  "productionUploaded": false,
+  "customerSenderEnabled": false,
+  "providerTesting": "Deferred by user",
+  "entries": [
+    {
+      "path": "index.html",
+      "sha256": "44eb6ffb1c82f13458828a146faac9742d30c2efbb85595c82fd1394410ea090"
+    },
+    {
+      "path": ".htaccess",
+      "sha256": "287e9e6a7925614951f4b4f858c364684e74606b56ecd25a5b9fc9bb5dcf2ce3"
+    },
+    {
+      "path": "favicon.svg",
+      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66"
+    },
+    {
+      "path": "icons.svg",
+      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a"
+    },
+    {
+      "path": "logo.jpg",
+      "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8"
+    },
+    {
+      "path": "assets/index-BFPwif0m.css",
+      "sha256": "de40ca70acfd21ad68625425564642a11d25eef41069cfc3a67b19070ed2edfa"
+    },
+    {
+      "path": "assets/index-H8zehVA1.js",
+      "sha256": "994f4e3fef0e34afd23ef90a1d072d8253f382b78ba68a8aa19e3017a317986d"
+    },
+    {
+      "path": "assets/logo-sbDsCuRb.jpg",
+      "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8"
+    }
+  ],
+  "verification": "See docs/saas-v2/frontend-validation.md"
+}

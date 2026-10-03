@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-03",
+  "v1Health": {
+    "success": true,
+    "schemaVersion": 1,
+    "senderEnabled": true
+  },
+  "vaultPrivate": true,
+  "privateTables": [
+    {
+      "rls": true,
+      "table": "provider_events",
+      "anonRead": false,
+      "authenticatedRead": false
+    },
+    {
+      "rls": true,
+      "table": "user_requests",
+      "anonRead": false,
+      "authenticatedRead": false
+    },
+    {
+      "rls": true,
+      "table": "campaigns",
+      "anonRead": false,
+      "authenticatedRead": false
+    },
+    {
+      "rls": true,
+      "table": "contacts",
+      "anonRead": false,
+      "authenticatedRead": false
+    },
+    {
+      "rls": true,
+      "table": "messages",
+      "anonRead": false,
+      "authenticatedRead": false
+    },
+    {
+      "rls": true,
+      "table": "message_attempts",
+      "anonRead": false,
+      "authenticatedRead": false
+    }
+  ],
+  "v1FunctionHashes": {
+    "api": "3f2093345c503764e83fc316687c3479",
+    "begin_send": "742997cc4e58eff017328b408bb8c250",
+    "claim_next": "d8872888881aeaaf2cc9fc329b81c764",
+    "finish_send": "52893cea2f73bf2d880d6ebae365e39b",
+    "maintenance": "b5ea12445494aa147d71fa9957139170",
+    "ingest_events": "fc2160f524d465cd9683d8a29a9180c6",
+    "process_events": "8f93c08e2878abb09e7ffe9f0e01f0e5",
+    "complete_finished_campaign": "db2f75502c80860e27b1ac5c4ddfa956",
+    "complete_after_message_change": "225107d80395e0b1eb6b33ce24f75232"
+  },
+  "customerQueueCount": 0,
+  "wrapperPermissions": [
+    {
+      "function": "eb_outreach_api_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_authorize_connection_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_authorize_import_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_begin_send_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_claim_next_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_finish_send_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_ingest_events_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_maintenance_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_session_credentials_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    },
+    {
+      "function": "eb_outreach_verify_webhook_v2",
+      "anonExecute": false,
+      "serviceExecute": true,
+      "authenticatedExecute": false
+    }
+  ],
+  "customerCampaignCount": 0
+}

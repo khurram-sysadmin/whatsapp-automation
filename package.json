@@ -11,9 +11,11 @@
     "test:lifecycle": "node tests/lifecycle.mjs",
     "test:v2-foundation": "node tests/v2-foundation.mjs",
     "test:v2-runtime": "node tests/v2-runtime.mjs",
-    "test:v2-workflow": "node tests/v2-workflow.mjs"
+    "test:v2-workflow": "node tests/v2-workflow.mjs",
+    "test:v2-frontend": "node tests/v2-frontend.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "@types/papaparse": "^5.5.2",
     "autoprefixer": "^10.6.1",
     "lucide-react": "^1.48.0",
@@ -23,9 +25,10 @@
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
@@ -33,7 +36,6 @@
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
-    "vite": "^8.3.0",
-    "@electric-sql/pglite": "0.3.14"
+    "vite": "^8.3.0"
   }
 }

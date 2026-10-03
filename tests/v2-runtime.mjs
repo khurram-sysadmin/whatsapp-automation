@@ -34,7 +34,9 @@ const session=async(uid,w,name,phone)=>{
  const connected=await api(uid,{action:'sessionConnect',workspaceId:w,whatsappSessionId:sid,apiSecret:key,webhookSecret:webhook},{status:'connected',phoneE164:phone});assert.equal(connected.success,true,JSON.stringify(connected));assert.ok(!JSON.stringify(connected).includes(key));return {sid,key,webhook};
 };
 const s1=await session(a,w1,'A first','+12025550191');const s2=await session(a,w1,'A second','+12025550192');const s3=await session(b,w2,'B first','+12025550193');
-assert.equal((await api(a,{action:'sessionList',workspaceId:w1})).data.length,2);assert.equal((await api(b,{action:'sessionList',workspaceId:w2})).data.length,1);
+const listedSessions=(await api(a,{action:'sessionList',workspaceId:w1})).data;
+assert.equal(listedSessions.length,2);assert.ok(listedSessions.every(s=>s.providerMode==='manual_session_key'));
+assert.equal((await api(b,{action:'sessionList',workspaceId:w2})).data.length,1);
 assert.equal(JSON.stringify((await db.query('SELECT request_body FROM outreach.api_requests_v2')).rows).includes('fixture-api-secret'),false);checks.push('Multiple numbers per company; API secrets omitted from response and idempotency cache');
 const create=async(uid,w,s,phone)=>{
  const c=await api(uid,{action:'create',workspaceId:w,whatsappSessionId:s.sid,name:'Fixture Campaign',template:'Hello {{first_name}}',timezone:'UTC',sendingStartTime:'00:00',sendingEndTime:'00:00',sendIntervalSeconds:15});assert.equal(c.success,true,JSON.stringify(c));
@@ -83,6 +85,8 @@ await db.exec('UPDATE public.plans SET max_monthly_messages=2');
 assert.equal((await db.query('SELECT * FROM public.eb_outreach_claim_next_v2()')).rows.length,0);
 await db.exec('UPDATE public.plans SET max_monthly_messages=NULL');checks.push('Monthly cap prevents additional claims; pause/resume/stop/suppress transitions verified');
 assert.equal((await api(a,{action:'sessionDisconnect',workspaceId:w1,whatsappSessionId:s1.sid})).success,true);
+const disconnected=(await api(a,{action:'sessionList',workspaceId:w1})).data.find(s=>s.whatsappSessionId===s1.sid);
+assert.equal(disconnected.configured,false);assert.equal(disconnected.providerMode,'manual_session_key');assert.equal(disconnected.status,'disconnected');
 assert.equal((await api(a,{action:'sessionConnect',workspaceId:w1,whatsappSessionId:s1.sid,apiSecret:s1.key,webhookSecret:s1.webhook},{status:'connected',phoneE164:'+12025550191'})).success,true);
 assert.equal((await db.query('SELECT enabled FROM outreach.session_sender_settings WHERE whatsapp_session_id=$1',[s1.sid])).rows[0].enabled,true);
 const remove={action:'sessionDelete',workspaceId:w1,whatsappSessionId:s1.sid,requestId:'remove-session-fixture-001'};

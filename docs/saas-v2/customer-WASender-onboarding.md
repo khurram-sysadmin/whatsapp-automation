@@ -1,6 +1,6 @@
 # Customer connection wizard — frontend specification
 
-Status: prepared for the frontend phase; not implemented or deployed yet.
+Status: implemented in the reviewed local frontend and upload build. Not uploaded to production. The user deferred real WASender connection, delivery and callback testing; these wizard steps are not claimed as exercised against a real provider. Imported legacy connections show Setup required and cannot be modified as customer-key connections.
 
 The company sees only its own connections. Company owners/admins can add several numbers; campaign creation selects one configured connection. n8n and Supabase stay operator-managed and never appear as customer credential fields.
 
