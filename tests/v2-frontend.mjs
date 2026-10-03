@@ -11,8 +11,9 @@ const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.
 const fixtureEnv={DEV:true,VITE_SUPABASE_URL:'https://fixture.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'fixture-public',VITE_OUTREACH_API_URL:'https://fixture.example/api',VITE_OUTREACH_IMPORT_URL:'https://fixture.example/import'};
 let userId='fixture-user-a',session={access_token:'fixture-session-token',user:{id:userId}},authOptions,handler;
 const calls=[],tabStorage={},exports={};
+let oauthInput,oauthError=null,oauthUrl='https://fixture.supabase.co/auth/v1/authorize?provider=google',redirectedTo='';
 const response=data=>new Response(JSON.stringify({success:true,data,error:null,requestId:'fixture-response'}),{status:200});
-const context=vm.createContext({exports,fixtureEnv,window:{location:{origin:'https://fixture.example'},sessionStorage:tabStorage},require:name=>{assert.equal(name,'@supabase/supabase-js');return {createClient:(url,key,options)=>{authOptions=options;return {auth:{getSession:async()=>({data:{session},error:null})}}}}},crypto:webcrypto,TextEncoder,Response,URL,FormData,File,AbortController,AbortSignal,setTimeout,clearTimeout,fetch:async(url,options)=>{calls.push({url,options});return handler(url,options)}});
+const context=vm.createContext({exports,fixtureEnv,window:{location:{origin:'https://fixture.example',assign:url=>{redirectedTo=url}},sessionStorage:tabStorage},require:name=>{assert.equal(name,'@supabase/supabase-js');return {createClient:(url,key,options)=>{authOptions=options;return {auth:{getSession:async()=>({data:{session},error:null}),signInWithOAuth:async input=>{oauthInput=input;return {data:{url:oauthUrl},error:oauthError}}}}}}},crypto:webcrypto,TextEncoder,Response,URL,FormData,File,AbortController,AbortSignal,setTimeout,clearTimeout,fetch:async(url,options)=>{calls.push({url,options});return handler(url,options)}});
 new vm.Script(compiled).runInContext(context);
 const client=exports,checks=[];
 assert.equal(authOptions.auth.storage,tabStorage);
@@ -45,4 +46,15 @@ const workbook=XLSX.utils.book_new();XLSX.utils.book_append_sheet(workbook,XLSX.
 const binary=XLSX.write(workbook,{type:'binary',bookType:'xlsx'});const reread=XLSX.read(binary,{type:'binary'});
 assert.deepEqual(XLSX.utils.sheet_to_json(reread.Sheets[reread.SheetNames[0]]),fixtureRows);
 checks.push('Updated SheetJS preserves the legacy binary workbook import API and international phone text');
+handler=async()=>new Response(JSON.stringify({external:{google:false}}));
+await assert.rejects(client.continueWithGoogle(),/use email/);assert.equal(oauthInput,undefined);assert.equal(redirectedTo,'');
+handler=async()=>new Response(JSON.stringify({external:{google:true}}));
+await client.continueWithGoogle();assert.equal(oauthInput.provider,'google');assert.equal(oauthInput.options.redirectTo,'https://fixture.example/login');assert.equal(oauthInput.options.skipBrowserRedirect,true);assert.equal(redirectedTo,oauthUrl);assert.equal(calls.at(-1).options.headers.Authorization,undefined);
+redirectedTo='';oauthUrl='https://untrusted.example/auth/v1/authorize';await assert.rejects(client.continueWithGoogle(),/use email/);assert.equal(redirectedTo,'');
+oauthUrl='https://fixture.supabase.co/auth/v1/authorize?provider=google';oauthError=new Error('Fixture OAuth failure');await assert.rejects(client.continueWithGoogle(),/OAuth failure/);assert.equal(redirectedTo,'');oauthError=null;
+fixtureEnv.DEV=false;fixtureEnv.VITE_APP_URL='https://fixture-production.example';
+// Build-time production redirect must not inherit a preview or alternate origin.
+const productionExports={};const productionContext=vm.createContext({...context,exports:productionExports});new vm.Script(compiled).runInContext(productionContext);
+await productionExports.continueWithGoogle();assert.equal(oauthInput.options.redirectTo,'https://fixture-production.example/login');
+checks.push('Google uses public provider readiness, blocks disabled/untrusted redirects, propagates failure and selects correct preview/production return URL');
 console.log(JSON.stringify({passed:true,checks,noExternalCalls:true}));

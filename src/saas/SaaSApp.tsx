@@ -4,6 +4,7 @@ import {
   action,
   configured,
   config,
+  continueWithGoogle,
   count,
   importContacts,
   label,
@@ -1881,10 +1882,26 @@ function Auth({
     [confirmPassword, setConfirmPassword] = useState(""),
     [fullName, setFullName] = useState(""),
     [busy, setBusy] = useState(false),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(
+      new URLSearchParams(location.search).has("error")
+        ? "Sign-in was cancelled or could not be completed. Please try again."
+        : "",
+    );
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const googleSignIn = async () => {
+    if (busy || googleBusy) return;
+    setGoogleBusy(true);
+    setNotice("");
+    try {
+      await continueWithGoogle();
+    } catch {
+      setNotice("Google sign-in is unavailable right now. Please use your email or try again later.");
+      setGoogleBusy(false);
+    }
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy || !supabase) return;
+    if (busy || googleBusy || !supabase) return;
     setBusy(true);
     setNotice("");
     try {
@@ -1962,11 +1979,11 @@ function Auth({
           Organize contacts, send campaigns and manage conversations from one
           workspace.
         </p>
-        <div className="v2-auth-steps">
-          1 · Create your company
-          <br />2 · Connect your WhatsApp numbers
-          <br />3 · Launch your outreach
-        </div>
+        <ol className="v2-auth-steps">
+          <li><span>1</span><div><strong>Make it your workspace</strong><p>Keep your contacts, campaigns and team together.</p></div></li>
+          <li><span>2</span><div><strong>Connect your WhatsApp</strong><p>Add your company’s numbers with a guided setup.</p></div></li>
+          <li><span>3</span><div><strong>Start better conversations</strong><p>Follow delivery and manage replies in one place.</p></div></li>
+        </ol>
       </section>
       <section className="v2-card v2-auth-form">
         <h2>
@@ -1978,7 +1995,24 @@ function Auth({
                 ? "Choose a new password"
                 : "Welcome back"}
         </h2>
-        <p>EightBit Outreach</p>
+        <p className="v2-auth-subtitle">
+          {mode === "signup" ? "Set up your account and bring your outreach together."
+            : mode === "login" ? "Sign in to your company workspace."
+            : mode === "forgot" ? "We’ll email you a link to get back into your account."
+            : "Choose a strong password to secure your account."}
+        </p>
+        {["login", "signup"].includes(mode) && <>
+          <button type="button" className="v2-google" onClick={googleSignIn} disabled={busy || googleBusy}>
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z"/>
+              <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.06.97-3.38.97-2.61 0-4.83-1.76-5.62-4.12H3.03v2.59A10 10 0 0 0 12 22Z"/>
+              <path fill="#FBBC05" d="M6.38 13.93A6 6 0 0 1 6.06 12c0-.67.12-1.32.32-1.93V7.48H3.03A10 10 0 0 0 2 12c0 1.61.38 3.14 1.03 4.52l3.35-2.59Z"/>
+              <path fill="#EA4335" d="M12 5.95c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.97 5.48l3.35 2.59C7.17 7.71 9.39 5.95 12 5.95Z"/>
+            </svg>
+            {googleBusy ? "Connecting to Google…" : "Continue with Google"}
+          </button>
+          <div className="v2-auth-divider"><span>or continue with email</span></div>
+        </>}
         {mode === "reset" && !hasSession ? (
           <p className="v2-notice" role="status">
             Open the password reset link from your email. If it has expired,
@@ -2032,7 +2066,7 @@ function Auth({
                 {notice}
               </p>
             )}
-            <button className="v2-primary" disabled={busy}>
+            <button className="v2-primary" disabled={busy || googleBusy}>
               {busy
                 ? "Please wait…"
                 : mode === "signup"
@@ -2047,6 +2081,7 @@ function Auth({
         )}
         <div className="v2-actions">
           <button
+            disabled={busy || googleBusy}
             onClick={() => switchMode(mode === "signup" ? "login" : "signup")}
           >
             {mode === "signup"
@@ -2054,6 +2089,7 @@ function Auth({
               : "Create an account"}
           </button>
           <button
+            disabled={busy || googleBusy}
             onClick={() => switchMode(mode === "forgot" ? "login" : "forgot")}
           >
             {mode === "forgot"

@@ -391,6 +391,8 @@ td {
   padding: 70px;
   max-width: 1400px;
   margin: auto;
+  width: 100%;
+  background: radial-gradient(ellipse at 12% 12%, #ffede6 0, transparent 46%), #f5f4f2;
 }
 .v2-auth-intro h1 {
   font-size: 44px;
@@ -406,11 +408,65 @@ td {
 }
 .v2-auth-steps {
   margin-top: 35px;
-  line-height: 2.8;
   color: #52525b;
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 22px;
+}
+.v2-auth-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.v2-auth-steps li > span {
+  background: #ffebe5;
+  border: 1px solid #ffd4c6;
+  color: #b93920;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.v2-auth-steps strong { font-size: 14px; color: #27272a; }
+.v2-auth-steps p { margin: 5px 0 0; font-size: 13px; line-height: 1.6; }
+.v2-auth .v2-google {
+  width: 100%;
+  min-height: 46px;
+  font-size: 14px;
+  gap: 12px;
+  color: #27272a;
+  background: #fff;
+  border-color: #d4d4d8;
+}
+.v2-auth .v2-google:hover:not(:disabled) { background: #fafafa; border-color: #a1a1aa; }
+.v2-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0;
+  color: #71717a;
+  font-size: 12px;
+}
+.v2-auth-divider::before, .v2-auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #e4e4e7;
+}
+.v2-auth-subtitle { color: #71717a; line-height: 1.65; margin: 9px 0 24px; }
+.v2-auth-form h2 { font-size: 25px; letter-spacing: -.6px; margin: 0; }
+.v2-auth-form input { min-height: 46px; }
+.v2-auth-form button:focus-visible {
+  outline: 3px solid #ffb6a3;
+  outline-offset: 3px;
 }
 .v2-auth-form {
   padding: 35px;
+  box-shadow: 0 12px 40px #30201508;
 }
 .v2-auth-form form > .v2-primary {
   width: 100%;
@@ -418,7 +474,16 @@ td {
 }
 .v2-auth-form .v2-actions {
   margin-top: 20px;
-  font-size: 11px;
+  font-size: 12px;
+  flex-direction: column;
+  gap: 8px;
+}
+.v2-auth-form .v2-actions button {
+  border: 0;
+  background: transparent;
+  color: #52525b;
+  font-weight: 500;
+  padding: 5px;
 }
 .v2-inbox {
   display: grid;

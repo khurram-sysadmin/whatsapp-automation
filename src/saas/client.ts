@@ -25,6 +25,31 @@ export const supabase = configured
     })
   : null;
 export type Row = Record<string, any>;
+export async function continueWithGoogle() {
+  if (!supabase) throw new Error("Sign-in is unavailable. Please try again later.");
+  const settingsResponse = await fetch(config.supabaseUrl + "/auth/v1/settings", {
+    headers: { apikey: config.publishableKey },
+    signal: AbortSignal.timeout(10000),
+    cache: "no-store",
+  });
+  if (!settingsResponse.ok || (await settingsResponse.json()).external?.google !== true)
+    throw new Error("Google sign-in is unavailable. Please use email for now.");
+  const redirectTo = new URL(
+    "/login",
+    import.meta.env.DEV ? window.location.origin : config.appUrl,
+  ).href;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error) throw error;
+  if (!data.url) throw new Error("Google sign-in is unavailable. Please use email for now.");
+  const destination = new URL(data.url);
+  if (destination.origin !== new URL(config.supabaseUrl).origin ||
+      destination.pathname !== "/auth/v1/authorize")
+    throw new Error("Google sign-in is unavailable. Please use email for now.");
+  window.location.assign(destination.href);
+}
 export const rows = (v: unknown): Row[] =>
   Array.isArray(v) ? v.filter((x) => x && typeof x === "object") : [];
 export const label = (v: unknown): string => (typeof v === "string" ? v : "");

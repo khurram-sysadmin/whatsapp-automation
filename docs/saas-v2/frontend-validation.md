@@ -44,3 +44,9 @@ Do not label this checkpoint “everything works perfectly” or enable the cust
 Final packaging/recovery check: a Windows/OneDrive ZIP watch lock stopped the development server during packaging. Vite now ignores release/document/backend artifacts. The server was restarted, the signed-in dashboard refreshed successfully, and duplicate errors are collapsed. Read failures say refresh failed; only ambiguous writes warn that an action may have completed. This change does not alter production CORS. Direct /campaigns and hard refresh were also checked.
 
 Targeted SaaS lint has no errors and four advisory warnings: two effects deliberately clear asynchronous authentication/company state, and two cleanup handlers advance numeric generation counters to invalidate stale requests. These are tracked rather than represented as a warning-free audit.
+
+## Logo and Google authentication follow-up — 2026-10-03
+
+Preserved the original logo artwork and used multiply compositing to remove its visible white rectangle on page backgrounds. Signup/login have a Google button, improved headings, ordered onboarding benefits, email divider, clear link hierarchy, keyboard focus and mobile sizing. Both were reviewed at desktop/390px (and narrow273px without overflow). The Google-disabled fallback was exercised in signup; login/signup switching and provider failure preserve email sign-in.
+
+Production build and legacy lifecycle passed; frontend suite now has six checks including Google readiness, trusted redirect validation and correct return origins. Public Supabase Auth settings currently report Google disabled. No Google OAuth credential or provider setting was created/changed. Real Google login is pending the operator steps in google-sign-in-setup.md. Production frontend remains not uploaded; WhatsApp testing stays deferred. Upload ZIP and manifest updated with this build.
