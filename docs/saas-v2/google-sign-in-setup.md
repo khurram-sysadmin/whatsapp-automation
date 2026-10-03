@@ -30,3 +30,7 @@ Disabled-provider handling was checked live in the browser; signup stays open wi
 ## Operator setup verified — 2026-10-03
 
 Owner reported completing Google OAuth setup. Public Supabase Auth settings now report external.google=true. Clicking Continue with Google in the local preview opened Google's account chooser. The authorization request uses the expected Supabase callback and http://127.0.0.1:5173/login return address. No account selected or consent submitted by the agent; full login/new-user onboarding, account linking and production return remain to be checked privately. No OAuth state URL, account list or secrets recorded in Git. The operator-only setup is enabled; earlier disabled-provider results document the prior checkpoint. No frontend rebuild is needed for this server setting.
+
+## Private Google sign-in completed — 2026-10-03
+
+User privately completed Google account selection/consent. Browser returned to /login# and displayed authenticated Set up your company onboarding; hard refresh retained that state and backend loading completed. This confirms preview Google sign-in and session persistence. This signed-in account currently has no linked company in the bootstrap response, as indicated by onboarding; its email/identity was not inspected. No company was created by the agent. Existing-owner workspace access, company creation/new onboarding completion and production redirect remain unverified. Do not describe this account as having reached the existing EightBit dashboard yet.
