@@ -1,0 +1,21 @@
+{
+  "guide_sha256": "ae919a6559970032bb32fa981749cdf7f5c2b3183897f3c86017ec85e3dbe13f",
+  "date": "2026-10-03",
+  "branch": "upgrade/saas-v2-foundation",
+  "baseline_commit": "8f2f7dfff1607dfa4940b5efd91ace236b1da4e8",
+  "phase": "foundation_complete_backend_dispatch_design_decision_pending",
+  "owner_email": "khurram@eightbitsolutions.com",
+  "foundation_applied": true,
+  "foundation_verified": true,
+  "owner_auth_account_created": true,
+  "legacy_backfill_applied": true,
+  "legacy_backfill_verified": true,
+  "owner_link_approved": true,
+  "dispatch_compatibility_reproduced_locally": true,
+  "auth_site_url": "https://wamarketing.eightbitsolutions.com",
+  "runtime_sql_applied": false,
+  "workflow_v2_imported": false,
+  "frontend_cutover": false,
+  "provider_mode": "pending_partner",
+  "approval_gate": "Guide Step 10 and final Next action: review runtime SQL and workflow JSON before running/importing"
+}
