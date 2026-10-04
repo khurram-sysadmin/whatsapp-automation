@@ -3,9 +3,9 @@
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
   "packageSha256": "ac89f994f3f05f30cc14624c3694da645619788220c9bbefa15cf43ce34e1d61",
-  "productionUploaded": false,
+  "productionUploaded": true,
   "customerSenderEnabled": true,
-  "automaticSetup": "Local tests passed; live PAT, provider mutation, hosted relay and signed callback checks pending",
+  "automaticSetup": "Hosted public assets match release; relay/setup endpoints verified; authenticated PAT, provider mutation and signed callback checks pending",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
@@ -56,5 +56,6 @@
       "path": "assets/logo-sbDsCuRb.jpg",
       "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8"
     }
-  ]
+  ],
+  "hostedVerification": "2026-10-04: 8 public asset hashes matched; relay GET 405 JSON; setup GET 405 JSON; missing bearer POST 401; n8n active with success/error/manual/progress execution persistence disabled."
 }
