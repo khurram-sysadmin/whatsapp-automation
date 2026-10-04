@@ -2,19 +2,19 @@
   "date": "2026-10-04",
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
-  "packageSha256": "6665075195d959bde04e5f441516e1126b5df6092664bc9cc96d3cc8e1885196",
+  "packageSha256": "daa250015680f5751410bc32e6b3b154bdc7124b1e3719febfcca4f58ace5063",
   "productionUploaded": false,
   "customerSenderEnabled": true,
-  "automaticSetup": "Latest hosted frontend verified by SHA256; private backend verification checks installed. Real connection save and signed callback remain pending.",
+  "automaticSetup": "Dialog consent alignment and top-right close verified locally on desktop/mobile; latest dialog fix package awaits upload. Provider identity verification last returned HTTP 408.",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
-      "path": "index.html",
-      "sha256": "8965981d31df2ffbdaf17fb50e9e8c9db168e7dae8a2146f4974d29a34334004"
-    },
-    {
       "path": ".htaccess",
       "sha256": "e937433a0ca30cbfae684ef2b0929d5122619f614d29868072131466e1c8b07e"
+    },
+    {
+      "path": "index.html",
+      "sha256": "cdce3b23fa4b830b0953be21b209282aaa56a8276d51bd00fd12ad3736e686fc"
     },
     {
       "path": "favicon.svg",
@@ -33,10 +33,6 @@
       "sha256": "faf3c3843bd58ac23a5a34228f6a17b2fdf5945540c8aa2fd984b48b814cfeef"
     },
     {
-      "path": "webhooks/whatsapp.php",
-      "sha256": "82269b061955a2e84021cbc299410c4dbf7c7191cab9310d4a1ba1cade79d30b"
-    },
-    {
       "path": "connect/wasender.php",
       "sha256": "d58aa9742691c907a896503099839c9a5d2e0b02973102132e48a3b1b812f6a6"
     },
@@ -45,12 +41,16 @@
       "sha256": "6245275bba23982f16f191b55a38e51980dc7d6c9f802e243536f15837586553"
     },
     {
-      "path": "assets/index-DuwhzciE.js",
-      "sha256": "175c05ef7c0d02b7e8e0e4cfe9de954f19ee0087250710e654f69afe2ec29152"
+      "path": "webhooks/whatsapp.php",
+      "sha256": "82269b061955a2e84021cbc299410c4dbf7c7191cab9310d4a1ba1cade79d30b"
     },
     {
-      "path": "assets/index-YLHMqxdG.css",
-      "sha256": "8d5b0405d8f7d896f3b6fe208e778720afddf5186b6edc516d6ee6b29de92879"
+      "path": "assets/index-BxOEWXMV.js",
+      "sha256": "5f8e86ea62de8e41a8ad6b5172667e4c48657326854f957c919c49d74c0b8463"
+    },
+    {
+      "path": "assets/index-CHaJobgP.css",
+      "sha256": "b1169dc26e8f62169373dda328a72be1b6d8104f6c83f9f37b1d326a33fcb52a"
     },
     {
       "path": "assets/logo-sbDsCuRb.jpg",
@@ -59,8 +59,8 @@
   ],
   "hostedVerification": "2026-10-04: 8 public asset hashes matched; relay GET 405 JSON; setup GET 405 JSON; missing bearer POST 401; n8n active with success/error/manual/progress execution persistence disabled.",
   "recoveryPackage": "WhatsApp-Automation-Recovery-cPanel-ready.zip",
-  "publicFrontendVerified": true,
-  "publicFrontendVerification": {
+  "publicFrontendVerified": false,
+  "previousFrontendVerification": {
     "date": "2026-10-04",
     "asset": "assets/index-DuwhzciE.js",
     "httpStatus": 200,

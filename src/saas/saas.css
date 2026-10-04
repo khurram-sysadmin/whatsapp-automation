@@ -262,6 +262,52 @@ a:focus-visible {
   margin-bottom: 16px;
   line-height: 1.8;
 }
+.v2-checkbox-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 16px 0;
+  cursor: pointer;
+}
+.v2-shell .v2-checkbox-notice input[type="checkbox"] {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  padding: 0;
+  accent-color: #ff5533;
+}
+.v2-checkbox-notice span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.v2-connection-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.v2-connection-header h3 {
+  margin: 5px 0 0;
+}
+.v2-shell .v2-connection-close {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: #71717a;
+}
+.v2-shell .v2-connection-close:hover:not(:disabled) {
+  background: #f4f4f5;
+  color: #18181b;
+}
+.v2-automatic-connection .v2-primary {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
 .v2-error button {
   margin-left: 10px;
 }

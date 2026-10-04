@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { supabase } from "./client";
 import type { Row } from "./client";
 
@@ -32,8 +33,9 @@ export function AutomaticConnection({workspaceId,onRefresh,onClose}: {workspaceI
     }catch(e){setError(e instanceof Error?e.message:"Unable to connect. Refresh before retrying.");}
     finally{setBusy(false);}
   };
-  return <section className="v2-card" aria-label="Automatic WhatsApp setup">
-    <h3>{done?"Your WhatsApp is connected":"Connect WhatsApp in three steps"}</h3>
+  const close=()=>{setPat("");setSessions([]);onClose();};
+  return <section className="v2-card v2-automatic-connection" aria-label="Automatic WhatsApp setup">
+    <div className="v2-connection-header"><h3>{done?"Your WhatsApp is connected":"Connect WhatsApp in three steps"}</h3><button type="button" className="v2-connection-close" aria-label="Close WhatsApp setup" title="Close setup" disabled={busy} onClick={close}><X size={18} aria-hidden="true" /></button></div>
     {done ? <><p>{done.displayName} · {done.phoneE164}</p><p>Configuration saved. Delivery updates are awaiting a verified provider callback.</p><p className="v2-muted">Your account token has been cleared from this setup. You can revoke it in WASender. Billing remains with your own WASender account.</p><button type="button" onClick={onClose}>Done</button></> : <>
       <ol className="v2-guide"><li>Sign in to your own WASender account and choose your plan. Connect WhatsApp by scanning its QR code from WhatsApp → Linked devices.</li><li>Open WASender Settings → Personal Access Token. Create a token and paste it below.</li><li>Select your connected number. EightBit configures message updates automatically.</li></ol>
       <a className="v2-button" href="https://www.wasenderapi.com" target="_blank" rel="noreferrer">Open WASender</a>
@@ -42,9 +44,9 @@ export function AutomaticConnection({workspaceId,onRefresh,onClose}: {workspaceI
       <button type="button" disabled={busy||pat.length<16} onClick={()=>void perform(false)}>{busy?"Checking…":"Find my WhatsApp numbers"}</button>
       {sessions.length>0&&<><label className="v2-field">Your WhatsApp number<select value={selected} disabled={busy} onChange={e=>{setSelected(e.target.value);setName(sessions.find(s=>s.id===e.target.value)?.name||"");setReplace(false);requestId.current=crypto.randomUUID();}}><option value="">Choose a connected number</option>{sessions.map(s=><option key={s.id} value={s.id} disabled={s.status!=='connected'}>{s.name} · {s.phone} · {s.status}</option>)}</select></label><label className="v2-field">Connection name<input value={name} maxLength={200} disabled={busy} onChange={e=>{setName(e.target.value);requestId.current=crypto.randomUUID();}} /></label>
       {picked?.resumingSetup&&<p className="v2-notice">We found unfinished setup for this number in your company. Finish connecting it without creating another connection or replacing its webhook.</p>}
-      {picked?.hasWebhook&&!picked?.resumingSetup&&<label className="v2-notice"><input type="checkbox" checked={replace} disabled={busy} onChange={e=>setReplace(e.target.checked)} /> This number already sends updates to another webhook. I approve replacing it for this company; its previous integration may stop receiving updates.</label>}
+      {picked?.hasWebhook&&!picked?.resumingSetup&&<label className="v2-notice v2-checkbox-notice"><input type="checkbox" checked={replace} disabled={busy} onChange={e=>setReplace(e.target.checked)} /><span>This number already sends updates to another webhook. I approve replacing it for this company; its previous integration may stop receiving updates.</span></label>}
       <button type="button" className="v2-primary" disabled={busy||!selected||!name.trim()||Boolean(picked?.hasWebhook&&!picked?.resumingSetup&&!replace)} onClick={()=>void perform(true)}>{busy?"Connecting securely…":picked?.resumingSetup?"Finish connection":"Connect selected number"}</button></>}
-      <button type="button" disabled={busy} onClick={()=>{setPat("");setSessions([]);onClose();}}>Cancel and clear token</button>
+      <button type="button" disabled={busy} onClick={close}>Cancel and clear token</button>
     </>}
     {error&&<p role="alert" className="v2-error">{error}</p>}
   </section>;
