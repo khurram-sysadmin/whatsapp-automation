@@ -28,7 +28,8 @@ BEGIN
  VALUES(whatsapp_session_id,wid,phase,http_status,reason)
  ON CONFLICT ON CONSTRAINT connection_checks_pkey DO UPDATE SET phase=excluded.phase,http_status=excluded.http_status,reason=excluded.reason,checked_at=now();
  RETURN outreach_v2.result_v2(CASE WHEN request_id ~ '^[A-Za-z0-9_-]{1,128}$' THEN request_id ELSE 'connection-check' END,
- NULL,'PROVIDER_NOT_CONNECTED','Unable to verify this WhatsApp connection.');
+ NULL,CASE WHEN http_status IN (408,504) THEN 'BACKEND_UNAVAILABLE' ELSE 'PROVIDER_NOT_CONNECTED' END,
+ CASE WHEN http_status IN (408,504) THEN 'WASender verification timed out. Please retry later.' ELSE 'Unable to verify this WhatsApp connection.' END);
 END $$;
 REVOKE ALL ON FUNCTION public.eb_outreach_record_connection_check_v2(uuid,uuid,text,integer,text,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.eb_outreach_record_connection_check_v2(uuid,uuid,text,integer,text,text) TO service_role;

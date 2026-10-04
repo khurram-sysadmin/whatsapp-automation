@@ -43,6 +43,9 @@ const diagnostic=async(uid,phase,status,reason)=>(await db.query('SELECT public.
 assert.equal((await diagnostic(b,'identity',200,'user_missing_id')).error.code,'FORBIDDEN');
 assert.equal((await diagnostic(a,'identity',200,'user_missing_id')).error.code,'PROVIDER_NOT_CONNECTED');
 assert.equal((await diagnostic(a,'status',429,'status_http')).error.code,'PROVIDER_NOT_CONNECTED');
+assert.equal((await diagnostic(a,'identity',408,'user_http')).error.code,'BACKEND_UNAVAILABLE');
+assert.equal((await diagnostic(a,'identity',504,'user_http')).error.code,'BACKEND_UNAVAILABLE');
+assert.equal((await diagnostic(a,'status',429,'status_http')).error.code,'PROVIDER_NOT_CONNECTED');
 assert.equal((await diagnostic(a,'identity',200,'raw-provider-body')).error.code,'INVALID_REQUEST');
 assert.equal((await diagnostic(a,null,200,'status_http')).error.code,'INVALID_REQUEST');
 const metadata=(await db.query('SELECT * FROM outreach_v2.connection_checks WHERE whatsapp_session_id=$1',[newNamed])).rows;
