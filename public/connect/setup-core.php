@@ -3,6 +3,14 @@ declare(strict_types=1);
 final class SetupFailure extends RuntimeException {
     public function __construct(public readonly string $safeCode, string $message, public readonly int $httpStatus = 400) { parent::__construct($message); }
 }
+// Only fixed, public-safe explanations. Never expose provider bodies or tokens.
+function setup_upstream_failure(bool $backend, int $status, bool $network): SetupFailure {
+    if ($network) return new SetupFailure($backend?'BACKEND_UNREACHABLE':'PROVIDER_UNREACHABLE', $backend?'Our connection service could not be reached from this server. Contact support.':'This server could not reach WASender securely. Contact support.', 502);
+    if ($status===401) return new SetupFailure($backend?'SIGN_IN_EXPIRED':'WASENDER_TOKEN_REJECTED', $backend?'Your sign-in could not be verified. Sign out, sign in again, then retry.':'WASender rejected this token. Use Settings → Personal Access Token, not your WhatsApp session API key.', $backend?401:400);
+    if ($status===403) return new SetupFailure($backend?'BACKEND_ACCESS_DENIED':'WASENDER_ACCESS_DENIED', $backend?'Your company access could not be verified. Contact support.':'WASender denied access to this account. Check the token permissions and account subscription in WASender.', 403);
+    if ($status===429) return new SetupFailure('UPSTREAM_RATE_LIMITED','The connection service is busy. Wait a minute before trying again.',429);
+    return new SetupFailure($backend?'BACKEND_REJECTED':'WASENDER_REQUEST_REJECTED', $backend?'Our connection service rejected the setup request. Contact support.':'WASender could not confirm this request. Check your account and connection status there before retrying.',502);
+}
 // Transport is injected for isolated tests. No token, body or provider response
 // is persisted. Public callers cannot choose any upstream address.
 final class WhatsAppSetup {

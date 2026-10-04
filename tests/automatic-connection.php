@@ -1,6 +1,12 @@
 <?php
 require __DIR__.'/../public/connect/setup-core.php';
 function check($ok,$message){if(!$ok)throw new Exception($message);}
+check(setup_upstream_failure(false,401,false)->safeCode==='WASENDER_TOKEN_REJECTED','provider token failure classification');
+check(setup_upstream_failure(true,401,false)->httpStatus===401,'backend auth failure classification');
+check(setup_upstream_failure(true,0,true)->safeCode==='BACKEND_UNREACHABLE','backend transport failure classification');
+check(setup_upstream_failure(false,0,true)->safeCode==='PROVIDER_UNREACHABLE','provider transport failure classification');
+check(setup_upstream_failure(false,403,false)->safeCode==='WASENDER_ACCESS_DENIED','provider access failure classification');
+check(setup_upstream_failure(false,429,false)->httpStatus===429,'provider rate limit classification');
 $wid='11111111-1111-4111-8111-111111111111';$sid='22222222-2222-4222-8222-222222222222';$key='fixture-session-secret-123456';$secret='fixture-webhook-secret-12345';$pat='fixture-account-token-123456';
 $base=['workspaceId'=>$wid,'requestId'=>'fixture-request-123456','operation'=>'list','personalAccessToken'=>$pat];
 function transportFor($role,$existing='', $fail=false){global $wid,$sid,$key,$secret; $calls=[];

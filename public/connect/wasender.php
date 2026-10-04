@@ -45,9 +45,11 @@ try {
             if ($ok!==false && $status===405 && trim($response)==='{"received":false}') return ['success'=>true];
             throw new SetupFailure('RELAY_UNAVAILABLE','Message update setup is unavailable. Contact support; your WASender settings have not been changed.',503);
         }
-        if ($ok===false || $status<200 || $status>=300) throw new SetupFailure('UPSTREAM_REJECTED','Setup could not be confirmed. Check your token and connections before retrying.',502);
-        $r=json_decode($response,true,32,JSON_THROW_ON_ERROR);
-        if (!is_array($r) || ($r['success'] ?? false)!==true) throw new SetupFailure('UPSTREAM_REJECTED','The connection service rejected this request.',502);
+        $backend = str_starts_with($url,'https://n8n.eightbitsolutions.com/');
+        if ($ok===false || $status<200 || $status>=300) throw setup_upstream_failure($backend,$status,$ok===false);
+        try { $r=json_decode($response,true,32,JSON_THROW_ON_ERROR); }
+        catch (JsonException $e) { throw new SetupFailure($backend?'BACKEND_RESPONSE':'WASENDER_RESPONSE','The connection service returned an unexpected response. Contact support.',502); }
+        if (!is_array($r) || ($r['success'] ?? false)!==true) throw setup_upstream_failure($backend,$status,false);
         return $r;
     };
     $result=(new WhatsAppSetup($transport))->run($p,$matches[1]);

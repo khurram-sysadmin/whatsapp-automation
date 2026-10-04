@@ -2,10 +2,10 @@
   "date": "2026-10-04",
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
-  "packageSha256": "ac89f994f3f05f30cc14624c3694da645619788220c9bbefa15cf43ce34e1d61",
-  "productionUploaded": true,
+  "packageSha256": "da2f0c6e0397ad3469dc5c3e7a02a5077f787b1ca9dbddb5b92874b47ad36ed8",
+  "productionUploaded": false,
   "customerSenderEnabled": true,
-  "automaticSetup": "Hosted public assets match release; relay/setup endpoints verified; authenticated PAT, provider mutation and signed callback checks pending",
+  "automaticSetup": "Previous hosted build verified; safe error classification patch packaged but not uploaded; authenticated provider setup and signed callbacks pending",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
@@ -38,11 +38,11 @@
     },
     {
       "path": "connect/wasender.php",
-      "sha256": "aeb8691af83e5f2e0871ee67e53ec7b11a2f530a8b4f95f4170fb0568529b76c"
+      "sha256": "6a9d5f30da3e193f59005b95076b205778468690abc00767fa8e7344752b86aa"
     },
     {
       "path": "connect/setup-core.php",
-      "sha256": "d0eaf45497945e2178e37cab42e9bc76f87b7ab30e236d280791107e49222568"
+      "sha256": "921b6c262d87fa97dcfee810139e0302880f2cb70ddc8ca30437208f8fd4613d"
     },
     {
       "path": "assets/index-4XcfYmXg.js",
