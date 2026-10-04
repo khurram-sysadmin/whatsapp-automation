@@ -3,9 +3,9 @@
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
   "packageSha256": "1373bc1e588b6f7739ffec7d9ef4674cb66e40d074ace1734734f01e50a2a27f",
-  "productionUploaded": false,
+  "productionUploaded": true,
   "customerSenderEnabled": true,
-  "automaticSetup": "Manual dashboard setup removed; Add account and Continue setup use only the PAT broker. Latest automatic-only package awaits upload; actual provider identity remains pending.",
+  "automaticSetup": "Automatic-only build verified live; existing pending connection recovered, independent provider proof and encrypted credential save succeeded. Signed callback and delivery pending.",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
@@ -57,9 +57,9 @@
       "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8"
     }
   ],
-  "hostedVerification": "2026-10-04: 8 public asset hashes matched; relay GET 405 JSON; setup GET 405 JSON; missing bearer POST 401; n8n active with success/error/manual/progress execution persistence disabled.",
+  "hostedVerification": "2026-10-04: Eight current public asset hashes match; browser BicySaTk; broker/relay GET 405 JSON. Existing same-company connection connected with messaging/webhook secret references. Callback not seen. PHP source and .htaccess hash unverified publicly.",
   "recoveryPackage": "WhatsApp-Automation-Recovery-cPanel-ready.zip",
-  "publicFrontendVerified": false,
+  "publicFrontendVerified": true,
   "previousFrontendVerification": {
     "date": "2026-10-04",
     "asset": "assets/index-DuwhzciE.js",
