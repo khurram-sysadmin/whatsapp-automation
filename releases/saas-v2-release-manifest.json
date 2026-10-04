@@ -5,7 +5,7 @@
   "packageSha256": "6665075195d959bde04e5f441516e1126b5df6092664bc9cc96d3cc8e1885196",
   "productionUploaded": false,
   "customerSenderEnabled": true,
-  "automaticSetup": "Owner-scoped pending recovery and safe backend error codes tested; provider phone corrected; latest recovery bundle awaits upload and real connection save/callback verification",
+  "automaticSetup": "Latest hosted frontend verified by SHA256; private backend verification checks installed. Real connection save and signed callback remain pending.",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
@@ -58,5 +58,13 @@
     }
   ],
   "hostedVerification": "2026-10-04: 8 public asset hashes matched; relay GET 405 JSON; setup GET 405 JSON; missing bearer POST 401; n8n active with success/error/manual/progress execution persistence disabled.",
-  "recoveryPackage": "WhatsApp-Automation-Recovery-cPanel-ready.zip"
+  "recoveryPackage": "WhatsApp-Automation-Recovery-cPanel-ready.zip",
+  "publicFrontendVerified": true,
+  "publicFrontendVerification": {
+    "date": "2026-10-04",
+    "asset": "assets/index-DuwhzciE.js",
+    "httpStatus": 200,
+    "bytes": 508725,
+    "sha256MatchesLocal": true
+  }
 }

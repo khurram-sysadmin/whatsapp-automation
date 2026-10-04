@@ -40,3 +40,5 @@ For rollback, restore the previous frontend/public files and keep the existing p
 The latest package also includes webhooks/whatsapp.php and lead-import-example.csv. PHP 8.1+ and curl are now required for the relay. Deploy these with the frontend before using the newly displayed branded webhook URL. Preserve existing provider webhook URLs until a signed callback works through the branded endpoint. This upload remains unverified. See personalization-and-connection-guide.md for rollout checks.
 
 2026-10-04: Apply backend/supabase/v2-review/007-active-connection-names.sql after 006. Installed live; archived names no longer block replacement connections. No cPanel reupload for this migration.
+
+2026-10-04: Migration 008-private-connection-checks.sql installed; existing workflow published as 71f3e4a7-636f-4ffd-93c5-111acc76d8c2 with 93 nodes. Private failure metadata only; browser access denied. Latest hosted JS index-DuwhzciE.js verified byte-for-byte; no new cPanel build required. See automatic-customer-setup.md for verification limits and pending private retry.

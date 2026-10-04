@@ -19,6 +19,8 @@ await db.exec(read('../backend/supabase/v2-review/004-isolated-storage.sql'));
 await db.exec(read('../backend/supabase/v2-review/supabase-v2-runtime.sql'));
 await db.exec(read('../backend/supabase/v2-review/007-active-connection-names.sql'));
 await db.exec(read('../backend/supabase/v2-review/007-active-connection-names.sql'));
+await db.exec(read('../backend/supabase/v2-review/008-private-connection-checks.sql'));
+await db.exec(read('../backend/supabase/v2-review/008-private-connection-checks.sql'));
 checks.push('Review schema and runtime SQL execute locally; Vault is mocked, not encryption-tested');
 const personalized = await db.query("SELECT outreach.personalize($1, $2::jsonb) message", ['Hi {{first_name}}, I saw your company, {{company}}.', JSON.stringify({first_name:'Khurram', company:'ITB Solutions'})]);
 assert.equal(personalized.rows[0].message, 'Hi Khurram, I saw your company, ITB Solutions.');
@@ -37,6 +39,16 @@ assert.equal((await api(a,{action:'sessionCreate',workspaceId:w1,displayName:'Re
 assert.equal((await api(a,{action:'sessionDelete',workspaceId:w1,whatsappSessionId:oldNamed})).success,true);
 const newNamed=(await api(a,{action:'sessionCreate',workspaceId:w1,displayName:'Reusable connection'})).data.whatsappSessionId;
 assert.ok(newNamed);assert.notEqual(newNamed,oldNamed);
+const diagnostic=async(uid,phase,status,reason)=>(await db.query('SELECT public.eb_outreach_record_connection_check_v2($1,$2,$3,$4,$5,$6) r',[uid,newNamed,phase,status,reason,'fixture-check'])).rows[0].r;
+assert.equal((await diagnostic(b,'identity',200,'user_missing_id')).error.code,'FORBIDDEN');
+assert.equal((await diagnostic(a,'identity',200,'user_missing_id')).error.code,'PROVIDER_NOT_CONNECTED');
+assert.equal((await diagnostic(a,'status',429,'status_http')).error.code,'PROVIDER_NOT_CONNECTED');
+assert.equal((await diagnostic(a,'identity',200,'raw-provider-body')).error.code,'INVALID_REQUEST');
+assert.equal((await diagnostic(a,null,200,'status_http')).error.code,'INVALID_REQUEST');
+const metadata=(await db.query('SELECT * FROM outreach_v2.connection_checks WHERE whatsapp_session_id=$1',[newNamed])).rows;
+assert.equal(metadata.length,1);assert.equal(metadata[0].workspace_id,w1);assert.equal(metadata[0].reason,'status_http');assert.equal(metadata[0].http_status,429);
+assert.deepEqual(Object.keys(metadata[0]).sort(),['whatsapp_session_id','workspace_id','phase','http_status','reason','checked_at'].sort());
+checks.push('Private connection checks enforce company membership, fixed metadata and one latest row; raw content rejected');
 assert.equal((await db.query('SELECT deleted_at IS NOT NULL archived FROM outreach.whatsapp_sessions WHERE id=$1',[oldNamed])).rows[0].archived,true);
 assert.equal((await api(a,{action:'sessionCreate',workspaceId:w1,displayName:'Reusable connection'})).success,false);
 assert.equal((await api(a,{action:'sessionDelete',workspaceId:w1,whatsappSessionId:newNamed})).success,true);
@@ -109,5 +121,6 @@ assert.equal((await db.query('SELECT enabled FROM outreach.session_sender_settin
 const remove={action:'sessionDelete',workspaceId:w1,whatsappSessionId:s1.sid,requestId:'remove-session-fixture-001'};
 assert.equal((await api(a,remove)).success,true);assert.equal((await api(a,remove)).success,true);assert.equal((await api(a,{...remove,requestId:'remove-session-fixture-002'})).success,true);
 const expected=JSON.parse(read('../docs/saas-v2/test-payloads.json')).actions.map(x=>x.action);for(const action of expected)assert.ok(covered.has(action),'Missing action test: '+action);checks.push('All 31 public actions exercised; connection removal retries and reconnect sender state verified');
+for(const role of ['anon','authenticated']){await db.exec('SET ROLE '+role);await assert.rejects(db.exec('SELECT * FROM outreach_v2.connection_checks'),/permission denied/);await assert.rejects(db.exec("SELECT public.eb_outreach_record_connection_check_v2(null,null,'status',200,'status_http','fixture')"),/permission denied/);await db.exec('RESET ROLE');}
 await db.exec('SET ROLE authenticated');await assert.rejects(db.exec('SELECT * FROM outreach_v2.messages'),/permission denied/);await assert.rejects(db.exec("SELECT public.eb_outreach_api_v2('11111111-1111-4111-8111-111111111111','{}')"),/permission denied/);await db.exec('RESET ROLE');checks.push('Browser roles cannot read private queues or call trusted-backend RPCs');
 console.log(JSON.stringify({passed:true,checks,publicActionsCovered:expected.length,noExternalCalls:true,vaultEncryptionTested:false,concurrentDatabaseTransactionsTested:false}));await db.close();

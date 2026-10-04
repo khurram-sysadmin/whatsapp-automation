@@ -19,6 +19,19 @@ const token='Bearer '+('x'.repeat(30));const request=await run('V2 API Require B
 const verified=await run('V2 API Verified Identity',[{json:{statusCode:200,body:{id:'11111111-1111-4111-8111-111111111111'}}}],{'V2 API Require Bearer':request[0]});assert.equal(verified[0].json.userId,'11111111-1111-4111-8111-111111111111');assert.equal(verified[0].json.authorization,undefined);checks.push('Missing/invalid JWT rejected; verified identity replaces browser userId and provider proof');
 const ctx={json:{valid:true,userId:'fixture',payload:{action:'sessionConnect',requestId:'fixture-connect'},providerStatus:'connected'}};
 const phone=await run('V2 Verified Provider Proof',[{json:{statusCode:200,body:{success:true,data:{id:'12025550191:1@s.whatsapp.net'}}}}],{'V2 Status Context':ctx});assert.equal(phone[0].json.providerProof.phoneE164,'+12025550191');checks.push('Phone identity is derived from verified WASender user response');
+ctx.json.userId='verified-user';ctx.json.payload.whatsappSessionId='verified-session';ctx.json.apiSecret='private-fixture-secret';
+for(const [statusCode,body,reason] of [[401,{secret:'raw-private-body'},'user_http'],[200,{success:false,secret:'raw-private-body'},'user_envelope'],[200,{success:true,data:{}},'user_missing_id'],[200,{success:true,data:{id:'invalid'}},'user_invalid_phone']]){
+ const rejected=(await run('V2 Verified Provider Proof',[{json:{statusCode,body}}],{'V2 Status Context':ctx}))[0].json;
+ assert.equal(rejected.diagnostic.reason,reason);assert.equal(rejected.diagnostic.phase,'identity');assert.equal(rejected.diagnostic.httpStatus,statusCode);
+ assert.equal(JSON.stringify(rejected).includes('private-fixture-secret'),false);assert.equal(JSON.stringify(rejected).includes('raw-private-body'),false);
+ assert.deepEqual(Object.keys(rejected.diagnostic).sort(),['userId','whatsappSessionId','phase','httpStatus','reason'].sort());
+}
+for(const [statusCode,body,reason] of [[429,{},'status_http'],[200,{status:'unknown'},'status_unknown'],[200,{status:'disconnected'},'status_disconnected']]){
+ const rejected=(await run('V2 Status Context',[{json:{statusCode,body}}],{'V2 Authorized Connection Context':ctx}))[0].json;
+ assert.equal(rejected.diagnostic.reason,reason);assert.equal(rejected.diagnostic.phase,'status');assert.equal(JSON.stringify(rejected).includes('private-fixture-secret'),false);
+}
+for(const name of ['V2 Status Verified','V2 Provider Proof Valid'])assert.equal(w.connections[name].main[1][0].node,'V2 Record Connection Check');
+checks.push('Private verification metadata distinguishes status and identity failures without keys or provider bodies; graph routes both failures to private RPC');
 const err=await run('V2 Safe RPC Response',[{json:{statusCode:500,body:{secret:'must-not-echo'}}}]);assert.equal(JSON.stringify(err).includes('must-not-echo'),false);checks.push('Database transport failures return a safe standard envelope');
 const send={json:{messageId:'id',leaseToken:'lease',apiSecret:'fixture-private-key'}};
 const uncertain=await run('V2 Classify Customer Send',[{json:{statusCode:502,body:{apiSecret:'must-not-persist'}}}],{'V2 Verified Send Items':[send]});assert.equal(uncertain[0].json.outcome,'unknown');assert.equal(JSON.stringify(uncertain).includes('must-not'),false);

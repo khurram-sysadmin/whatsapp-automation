@@ -1437,7 +1437,7 @@
         3900
       ],
       "parameters": {
-        "jsCode": "function fail(code,message,rid='req_error'){return [{json:{valid:false,result:{success:false,data:null,error:{code,message},requestId:rid}}}];}const r=$input.first().json,req=$('V2 Authorized Connection Context').first().json,body=r.body??{};if(r.statusCode!==200)return fail('PROVIDER_NOT_CONNECTED','WASender rejected the key or could not be reached. Check the key and retry.',req.payload.requestId);const providerStatus=body.status??body.data?.status;if(!['connected','connecting','disconnected','expired','need_scan','need_passkey','logged_out'].includes(providerStatus))return fail('PROVIDER_NOT_CONNECTED','WASender returned an unknown connection status.',req.payload.requestId);if(req.payload.action==='sessionConnect'&&providerStatus!=='connected')return fail('PROVIDER_NOT_CONNECTED','Connect this WhatsApp number in WASender before saving its key.',req.payload.requestId);return [{json:{valid:true,...req,providerStatus}}];"
+        "jsCode": "\nconst r=$input.first().json,req=$('V2 Authorized Connection Context').first().json,body=r.body??{};\nfunction reject(reason){const status=Number.isInteger(r.statusCode)&&r.statusCode>=0&&r.statusCode<=599?r.statusCode:0;return [{json:{valid:false,result:{success:false,data:null,error:{code:'PROVIDER_NOT_CONNECTED',message:'Unable to verify this WhatsApp connection.'},requestId:req.payload.requestId},diagnostic:{userId:req.userId,whatsappSessionId:req.payload.whatsappSessionId,phase:'status',httpStatus:status,reason}}}];}\nif(r.statusCode!==200)return reject('status_http');\nconst providerStatus=body.status??body.data?.status;\nif(!['connected','connecting','disconnected','expired','need_scan','need_passkey','logged_out'].includes(providerStatus))return reject('status_unknown');\nif(req.payload.action==='sessionConnect'&&providerStatus!=='connected')return reject('status_disconnected');\nreturn [{json:{valid:true,...req,providerStatus}}];"
       }
     },
     {
@@ -1521,7 +1521,7 @@
         3900
       ],
       "parameters": {
-        "jsCode": "function fail(code,message,rid='req_error'){return [{json:{valid:false,result:{success:false,data:null,error:{code,message},requestId:rid}}}];}const r=$input.first().json,req=$('V2 Status Context').first().json,body=r.body??{};if(req.payload.action==='sessionStatus'&&req.providerStatus!=='connected')return [{json:{userId:req.userId,payload:req.payload,providerProof:{status:({need_scan:'connecting',need_passkey:'connecting',logged_out:'disconnected'}[req.providerStatus]??req.providerStatus)}}}];const id=String(body.data?.id??'');const phone='+'+id.split('@')[0].split(':')[0].replace(/^\\+/,'');if(r.statusCode!==200||body.success!==true||!/^\\+[1-9][0-9]{7,14}$/.test(phone))return fail('PROVIDER_NOT_CONNECTED','Unable to verify the WhatsApp number for this API key.',req.payload.requestId);return [{json:{userId:req.userId,payload:req.payload,providerProof:{status:req.providerStatus,phoneE164:phone}}}];"
+        "jsCode": "\nconst r=$input.first().json,req=$('V2 Status Context').first().json,body=r.body??{};\nfunction reject(reason){const status=Number.isInteger(r.statusCode)&&r.statusCode>=0&&r.statusCode<=599?r.statusCode:0;return [{json:{valid:false,result:{success:false,data:null,error:{code:'PROVIDER_NOT_CONNECTED',message:'Unable to verify this WhatsApp connection.'},requestId:req.payload.requestId},diagnostic:{userId:req.userId,whatsappSessionId:req.payload.whatsappSessionId,phase:'identity',httpStatus:status,reason}}}];}\nif(req.payload.action==='sessionStatus'&&req.providerStatus!=='connected')return [{json:{userId:req.userId,payload:req.payload,providerProof:{status:({need_scan:'connecting',need_passkey:'connecting',logged_out:'disconnected'}[req.providerStatus]??req.providerStatus)}}}];\nif(r.statusCode!==200)return reject('user_http');\nif(body.success!==true)return reject('user_envelope');\nconst id=String(body.data?.id??'');\nif(!id)return reject('user_missing_id');\nconst phone='+'+id.split('@')[0].split(':')[0].replace(/^\\+/,'');\nif(!/^\\+[1-9][0-9]{7,14}$/.test(phone))return reject('user_invalid_phone');\nreturn [{json:{userId:req.userId,payload:req.payload,providerProof:{status:req.providerStatus,phoneE164:phone}}}];"
       },
       "notes": "Derives the connected phone from WASender /api/user, never from browser input."
     },
@@ -2420,6 +2420,49 @@
           "name": "Supabase account 2"
         }
       }
+    },
+    {
+      "id": "2d3d1198-d8d4-4e94-99e9-9a84cc0db42a",
+      "name": "V2 Record Connection Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4800,
+        5050
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://lreolnewuapcurpskqwr.supabase.co/rest/v1/rpc/eb_outreach_record_connection_check_v2",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({user_id:$json.diagnostic.userId,whatsapp_session_id:$json.diagnostic.whatsappSessionId,phase:$json.diagnostic.phase,http_status:$json.diagnostic.httpStatus,reason:$json.diagnostic.reason,request_id:$json.result.requestId}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      },
+      "notes": "Private latest failed verification phase/status/reason only; no keys, phone or provider body."
     }
   ],
   "connections": {
@@ -3002,7 +3045,7 @@
         ],
         [
           {
-            "node": "V2 Return JSON",
+            "node": "V2 Record Connection Check",
             "type": "main",
             "index": 0
           }
@@ -3042,7 +3085,7 @@
         ],
         [
           {
-            "node": "V2 Return JSON",
+            "node": "V2 Record Connection Check",
             "type": "main",
             "index": 0
           }
@@ -3440,6 +3483,17 @@
         [
           {
             "node": "V2 Commit Customer Send Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "V2 Record Connection Check": {
+      "main": [
+        [
+          {
+            "node": "V2 Safe RPC Response",
             "type": "main",
             "index": 0
           }

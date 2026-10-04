@@ -257,9 +257,14 @@
       "name": "V2 Commit Customer Send Outcome",
       "type": "n8n-nodes-base.httpRequest",
       "purpose": "Commit Customer Send Outcome"
+    },
+    {
+      "name": "V2 Record Connection Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Private latest failed verification phase/status/reason only; no keys, phone or provider body."
     }
   ],
-  "totalNodes": 92,
+  "totalNodes": 93,
   "settingsChanges": {
     "saveManualExecutions": false,
     "saveDataErrorExecution": "none",
@@ -268,5 +273,6 @@
   "requiredCredential": "Existing operator Supabase account 2 (supabaseApi); credential reference only",
   "requiredVariable": null,
   "customerWorkerDisabled": true,
-  "reviewBeforeImport": true
+  "reviewBeforeImport": true,
+  "addedNodesCount": 52
 }
