@@ -38,3 +38,5 @@ For rollback, restore the previous frontend/public files and keep the existing p
 ## Personalization and branded webhook package — 2026-10-04
 
 The latest package also includes webhooks/whatsapp.php and lead-import-example.csv. PHP 8.1+ and curl are now required for the relay. Deploy these with the frontend before using the newly displayed branded webhook URL. Preserve existing provider webhook URLs until a signed callback works through the branded endpoint. This upload remains unverified. See personalization-and-connection-guide.md for rollout checks.
+
+2026-10-04: Apply backend/supabase/v2-review/007-active-connection-names.sql after 006. Installed live; archived names no longer block replacement connections. No cPanel reupload for this migration.

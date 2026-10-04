@@ -3,9 +3,9 @@
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
   "packageSha256": "da2f0c6e0397ad3469dc5c3e7a02a5077f787b1ca9dbddb5b92874b47ad36ed8",
-  "productionUploaded": false,
+  "productionUploaded": true,
   "customerSenderEnabled": true,
-  "automaticSetup": "Previous hosted build verified; safe error classification patch packaged but not uploaded; authenticated provider setup and signed callbacks pending",
+  "automaticSetup": "Customer PAT lookup verified; error patch uploaded; archived connection name migration applied and live rollback-tested; actual provider connection save and signed callback pending",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {

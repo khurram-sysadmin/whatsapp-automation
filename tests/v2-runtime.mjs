@@ -17,6 +17,8 @@ await db.exec(read('../backend/supabase/v2-foundation/001-identity.sql').replace
 await db.exec(read('../backend/supabase/v2-foundation/002-private-saas-tables.sql'));
 await db.exec(read('../backend/supabase/v2-review/004-isolated-storage.sql'));
 await db.exec(read('../backend/supabase/v2-review/supabase-v2-runtime.sql'));
+await db.exec(read('../backend/supabase/v2-review/007-active-connection-names.sql'));
+await db.exec(read('../backend/supabase/v2-review/007-active-connection-names.sql'));
 checks.push('Review schema and runtime SQL execute locally; Vault is mocked, not encryption-tested');
 const personalized = await db.query("SELECT outreach.personalize($1, $2::jsonb) message", ['Hi {{first_name}}, I saw your company, {{company}}.', JSON.stringify({first_name:'Khurram', company:'ITB Solutions'})]);
 assert.equal(personalized.rows[0].message, 'Hi Khurram, I saw your company, ITB Solutions.');
@@ -30,6 +32,15 @@ const covered=new Set();let seq=0;const api=async(uid,p,proof={})=>{covered.add(
 const w1=(await api(a,{action:'workspaceCreate',companyName:'Company A',timezone:'UTC'})).data.workspaceId;
 const w2=(await api(b,{action:'workspaceCreate',companyName:'Company B',timezone:'UTC'})).data.workspaceId;
 assert.ok(w1);assert.ok(w2);
+const oldNamed=(await api(a,{action:'sessionCreate',workspaceId:w1,displayName:'Reusable connection'})).data.whatsappSessionId;
+assert.equal((await api(a,{action:'sessionCreate',workspaceId:w1,displayName:'Reusable connection'})).success,false);
+assert.equal((await api(a,{action:'sessionDelete',workspaceId:w1,whatsappSessionId:oldNamed})).success,true);
+const newNamed=(await api(a,{action:'sessionCreate',workspaceId:w1,displayName:'Reusable connection'})).data.whatsappSessionId;
+assert.ok(newNamed);assert.notEqual(newNamed,oldNamed);
+assert.equal((await db.query('SELECT deleted_at IS NOT NULL archived FROM outreach.whatsapp_sessions WHERE id=$1',[oldNamed])).rows[0].archived,true);
+assert.equal((await api(a,{action:'sessionCreate',workspaceId:w1,displayName:'Reusable connection'})).success,false);
+assert.equal((await api(a,{action:'sessionDelete',workspaceId:w1,whatsappSessionId:newNamed})).success,true);
+checks.push('Archived connection names can be reused; active duplicates stay blocked and archived audit rows survive');
 const boot=await api(a,{action:'bootstrap',userId:b});assert.equal(boot.data.user.userId,a);assert.equal(boot.data.workspaces.length,1);
 assert.equal((await api(a,{action:'list',workspaceId:w2})).error.code,'FORBIDDEN');
 await db.query("INSERT INTO public.workspace_members(workspace_id,user_id,role) VALUES($1,$2,'viewer')",[w1,viewer]);
