@@ -42,3 +42,5 @@ The latest package also includes webhooks/whatsapp.php and lead-import-example.c
 2026-10-04: Apply backend/supabase/v2-review/007-active-connection-names.sql after 006. Installed live; archived names no longer block replacement connections. No cPanel reupload for this migration.
 
 2026-10-04: Migration 008-private-connection-checks.sql installed; existing workflow published as 71f3e4a7-636f-4ffd-93c5-111acc76d8c2 with 93 nodes. Private failure metadata only; browser access denied. Latest hosted JS index-DuwhzciE.js verified byte-for-byte; no new cPanel build required. See automatic-customer-setup.md for verification limits and pending private retry.
+
+2026-10-04: Latest automatic-only cPanel ZIP removes every old manual setup entry point from the customer dashboard. Canonical SaaS ZIP identical, JS index-BicySaTk.js. Upload pending. Backend remains existing 93-node published workflow; provider session124608 is Connected with correctly matching pending webhook, but identity timeout remains unresolved. See automatic-customer-setup.md.

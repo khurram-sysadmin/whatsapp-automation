@@ -2,10 +2,10 @@
   "date": "2026-10-04",
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
-  "packageSha256": "daa250015680f5751410bc32e6b3b154bdc7124b1e3719febfcca4f58ace5063",
+  "packageSha256": "1373bc1e588b6f7739ffec7d9ef4674cb66e40d074ace1734734f01e50a2a27f",
   "productionUploaded": false,
   "customerSenderEnabled": true,
-  "automaticSetup": "Dialog consent alignment and top-right close verified locally on desktop/mobile; latest dialog fix package awaits upload. Provider identity verification last returned HTTP 408.",
+  "automaticSetup": "Manual dashboard setup removed; Add account and Continue setup use only the PAT broker. Latest automatic-only package awaits upload; actual provider identity remains pending.",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
@@ -14,7 +14,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "cdce3b23fa4b830b0953be21b209282aaa56a8276d51bd00fd12ad3736e686fc"
+      "sha256": "62eacc9768bb916c57434e5663ae4bf33ce9fd071cccd129b37d69ca3b45fcb6"
     },
     {
       "path": "favicon.svg",
@@ -45,8 +45,8 @@
       "sha256": "82269b061955a2e84021cbc299410c4dbf7c7191cab9310d4a1ba1cade79d30b"
     },
     {
-      "path": "assets/index-BxOEWXMV.js",
-      "sha256": "5f8e86ea62de8e41a8ad6b5172667e4c48657326854f957c919c49d74c0b8463"
+      "path": "assets/index-BicySaTk.js",
+      "sha256": "0c1b27d964b2f11fef0db6008d1ea2007b44e2a8f11c6c969aedcdd588314ee5"
     },
     {
       "path": "assets/index-CHaJobgP.css",

@@ -2171,7 +2171,7 @@ export function Company({ onCreated, fullName = "" }: { onCreated: (id: string) 
     </div>
   );
 }
-function Connections({
+export function Connections({
   workspaceId,
   sessions,
   onRefresh,
@@ -2185,40 +2185,9 @@ function Connections({
   onTest: (session: Row) => void;
 }) {
   const [automatic, setAutomatic] = useState(false);
-  const [chosen, setChosen] = useState<Row | null>(null),
-    [step, setStep] = useState(1),
-    [displayName, setDisplayName] = useState(""),
-    [apiSecret, setApiSecret] = useState(""),
-    [webhookSecret, setWebhookSecret] = useState(""),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  const webhookUrl = chosen?.whatsappSessionId ? new URL("/webhooks/whatsapp.php?whatsappSessionId=" + encodeURIComponent(chosen.whatsappSessionId), config.appUrl).href : "";
-  const [copied, setCopied] = useState("");
-  const copyUrl = async () => {
-    try { await navigator.clipboard.writeText(webhookUrl); setCopied("Webhook URL copied"); }
-    catch { setCopied("Select the URL and copy it manually."); }
-  };
-  const prepare = async () => {
-    if (busy) return;
-    setBusy(true); setError("");
-    try {
-      if (!chosen?.whatsappSessionId) {
-        setChosen(await action("sessionCreate", workspaceId, { displayName }));
-        await onRefresh();
-      }
-      setStep(2);
-    } catch (e) { setError(errorText(e)); }
-    finally { setBusy(false); }
-  };
-  const close = () => {
-    setCopied("");
-    setChosen(null);
-    setStep(1);
-    setApiSecret("");
-    setWebhookSecret("");
-    setError("");
-  };
-  useDialogFocus(Boolean(chosen) || automatic, () => { if (!automatic) close(); }, busy);
+  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const openAutomatic = () => { setError(""); setAutomatic(true); };
+  useDialogFocus(automatic, () => {}, busy);
   const operate = async (op: string, s: Row) => {
     if (busy) return;
     if (
@@ -2242,32 +2211,6 @@ function Connections({
       setBusy(false);
     }
   };
-  const connect = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      let s = chosen!;
-      if (!s.whatsappSessionId) {
-        s = await action("sessionCreate", workspaceId, { displayName });
-        setChosen(s);
-      }
-      s = await action("sessionConnect", workspaceId, {
-        whatsappSessionId: s.whatsappSessionId,
-        apiSecret,
-        webhookSecret,
-      });
-      setChosen(s);
-      setApiSecret("");
-      setStep(3);
-      await onRefresh();
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <>
       <div className="v2-section-head">
@@ -2278,11 +2221,7 @@ function Connections({
         {canManage && (
           <button
             className="v2-primary"
-            onClick={() => {
-              close();
-              setDisplayName("");
-              setAutomatic(true);
-            }}
+            onClick={openAutomatic}
           >
             <Plus size={15} /> Add WhatsApp Account
           </button>
@@ -2329,14 +2268,6 @@ function Connections({
                   >
                     Check status
                   </button>
-                  <button
-                    onClick={() => {
-                      setChosen(s);
-                      setStep(3);
-                    }}
-                  >
-                    Setup guide
-                  </button>
                 </>
               )}
               {canManage && s.configured && (
@@ -2351,11 +2282,7 @@ function Connections({
                 !s.configured &&
                 s.providerMode === "manual_session_key" && (
                   <button
-                    onClick={() => {
-                      setChosen(s);
-                      setDisplayName(s.displayName);
-                      setStep(2);
-                    }}
+                    onClick={openAutomatic}
                   >
                     Continue setup
                   </button>
@@ -2384,16 +2311,6 @@ function Connections({
                   >
                     Remove connection
                   </button>
-                  <button
-                    onClick={() => {
-                      close();
-                      setChosen(s);
-                      setDisplayName(s.displayName);
-                      setStep(2);
-                    }}
-                  >
-                    Replace API key
-                  </button>
                 </>
               )}
             </div>
@@ -2404,178 +2321,10 @@ function Connections({
         <section className="v2-card">
           <h3>Connect your first number</h3>
           <p>
-            You only need your WASender session API key. We manage the rest of
-            the platform.
+            Connect WhatsApp in your WASender account, then use your Personal Access
+            Token to select a number. We configure message updates automatically.
           </p>
         </section>
-      )}
-      {chosen && (
-        <div className="v2-overlay">
-          <section
-            className="v2-card v2-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="WhatsApp setup"
-          >
-            <div className="v2-section-head">
-              <h2>Connect your WhatsApp</h2>
-              <button aria-label="Close setup" onClick={close} disabled={busy}>
-                <X size={20} />
-              </button>
-            </div>
-            <ol className="v2-progress">
-              <li className={step === 1 ? "active" : ""}>1 · Link phone</li>
-              <li className={step === 2 ? "active" : ""}>2 · API key</li>
-              <li className={step === 3 ? "active" : ""}>3 · Webhook</li>
-              <li className={step === 4 ? "active" : ""}>4 · Test</li>
-            </ol>
-            {step === 1 && (
-              <>
-                <h3>Link your number in WASender</h3>
-                <ol className="v2-guide">
-                  <li>Open WASender below and sign in to your account.</li>
-                  <li>Choose Connect WhatsApp / Add session. Enter the name, country and number requested there, then save.</li>
-                  <li>On your phone, open WhatsApp → Settings (iPhone) or ⋮ (Android) → Linked devices → Link a device. Scan the QR code shown in WASender.</li>
-                  <li>Wait until WASender shows Connected.</li>
-                </ol>
-                <a
-                  className="v2-button"
-                  href="https://www.wasenderapi.com"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open WASender
-                </a>
-                <Field name="Connection name" value={displayName} onChange={setDisplayName} required />
-                <p className="v2-muted">Use a label such as Sales team. Your company is already selected; the phone number is verified from WASender.</p>
-                <button className="v2-primary" disabled={busy || !displayName.trim()} onClick={() => void prepare()}>
-                  {busy ? "Preparing connection…" : "My number is connected — continue"}
-                </button>
-              </>
-            )}
-            {step === 2 && (
-              <form onSubmit={connect}>
-                <h3>Connect EightBit to your number</h3>
-                <p>In your WASender session settings, enable Webhooks and paste this URL. It is available now, before entering your keys.</p>
-                <label className="v2-field">Webhook URL<input readOnly value={webhookUrl} /></label>
-                <button type="button" onClick={() => void copyUrl()}>Copy webhook URL</button>
-                <p role="status" className="v2-muted">{copied}</p>
-                <p>Select messages.upsert, messages.update, message-receipt.update, message.sent and session.status, then save in WASender. These keep replies, delivery status and connection status up to date. Leave messages.delete, groups and reactions unchecked.</p>
-                <p>Copy this session’s API key and generated webhook secret from WASender below.</p>
-                <p>
-                  Copy the API key from this WASender session’s details. Use the
-                  session key, not an account Personal Access Token.
-                </p>
-                <Field
-                  name="Connection name"
-                  value={displayName}
-                  onChange={setDisplayName}
-                  required
-                />
-                <Field
-                  name="WASender session API key"
-                  type="password"
-                  autoComplete="off"
-                  minLength={16}
-                  value={apiSecret}
-                  onChange={setApiSecret}
-                  required
-                />
-                <Field
-                  name="WASender webhook secret"
-                  type="password"
-                  autoComplete="off"
-                  minLength={16}
-                  value={webhookSecret}
-                  onChange={setWebhookSecret}
-                  required
-                />
-                <p className="v2-muted">
-                  Paste the webhook secret generated by WASender when you enable Webhooks. Keep it private and use the same value in both places; this is different from your API key.
-                </p>
-                <button disabled={busy} className="v2-primary">
-                  {busy ? "Verifying number…" : "Verify and save connection"}
-                </button>
-              </form>
-            )}
-            {step === 3 && (
-              <>
-                <h3>Enable message updates</h3>
-                <p>
-                  Webhooks keep your inbox, delivery status and connection status up to date. In WASender, enable Webhooks and paste this URL. Keep the same webhook secret you copied to EightBit.
-                </p>
-                <label className="v2-field">
-                  Webhook URL
-                  <input readOnly value={webhookUrl} />
-                </label>
-                <button onClick={() => void copyUrl()}>Copy webhook URL</button>
-                <p role="status" className="v2-muted">{copied}</p>
-                <ul className="v2-guide">
-                  <li>messages.upsert — incoming replies.</li>
-                  <li>messages.update and message-receipt.update — delivery/read updates.</li>
-                  <li>message.sent — sent status.</li>
-                  <li>session.status — connection status.</li>
-                </ul>
-                <p className="v2-muted">Select these in WASender. Leave deletion, groups and reaction events unchecked. Save your WASender settings.</p>
-                {webhookSecret && (
-                  <label className="v2-field">
-                    Your webhook secret
-                    <input type="password" readOnly value={webhookSecret} />
-                  </label>
-                )}
-                <a
-                  href="https://api.wasenderapi.com/api-docs/webhooks/webhook-setup"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open webhook instructions
-                </a>
-                <p className="v2-muted">
-                  {sessions.find(
-                    (s) => s.whatsappSessionId === chosen.whatsappSessionId,
-                  )?.webhookReady
-                    ? "Callback verified"
-                    : "Waiting for a signed callback from WASender."}
-                </p>
-                <button
-                  className="v2-primary"
-                  onClick={() => {
-                    setWebhookSecret("");
-                    setStep(4);
-                  }}
-                >
-                  I saved the webhook settings
-                </button>
-              </>
-            )}
-            {step === 4 && (
-              <>
-                <h3>Test your connection</h3>
-                <p>
-                  Send one test message to a number you control. You will
-                  confirm the recipient and message first. Ready requires an
-                  accepted test and a verified callback.
-                </p>
-                <button
-                  className="v2-primary"
-                  onClick={() => {
-                    const s = chosen;
-                    close();
-                    onTest(s);
-                  }}
-                >
-                  Set up test message
-                </button>
-                <button onClick={close}>Finish later</button>
-              </>
-            )}
-            {error && (
-              <p role="alert" className="v2-error">
-                {error}
-              </p>
-            )}
-          </section>
-        </div>
       )}
     </>
   );
