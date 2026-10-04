@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import "./saas.css";
 import { MessageEditor } from "./MessageEditor";
+import { AutomaticConnection } from "./AutomaticConnection";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
   return (
     <div className="v2-welcome v2-welcome-loading" role="status">
@@ -2183,6 +2184,7 @@ function Connections({
   canManage: boolean;
   onTest: (session: Row) => void;
 }) {
+  const [automatic, setAutomatic] = useState(false);
   const [chosen, setChosen] = useState<Row | null>(null),
     [step, setStep] = useState(1),
     [displayName, setDisplayName] = useState(""),
@@ -2216,7 +2218,7 @@ function Connections({
     setWebhookSecret("");
     setError("");
   };
-  useDialogFocus(Boolean(chosen), close, busy);
+  useDialogFocus(Boolean(chosen) || automatic, () => { if (!automatic) close(); }, busy);
   const operate = async (op: string, s: Row) => {
     if (busy) return;
     if (
@@ -2279,7 +2281,7 @@ function Connections({
             onClick={() => {
               close();
               setDisplayName("");
-              setChosen({});
+              setAutomatic(true);
             }}
           >
             <Plus size={15} /> Add WhatsApp Account
@@ -2291,6 +2293,7 @@ function Connections({
           {error}
         </p>
       )}
+      {automatic && <div className="v2-overlay"><section className="v2-dialog" role="dialog" aria-modal="true" aria-label="Connect WhatsApp"><AutomaticConnection key={workspaceId} workspaceId={workspaceId} onRefresh={onRefresh} onClose={() => setAutomatic(false)} /></section></div>}
       <div className="v2-grid">
         {sessions.map((s) => (
           <article className="v2-card" key={s.whatsappSessionId}>

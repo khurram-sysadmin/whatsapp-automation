@@ -2,19 +2,19 @@
   "date": "2026-10-04",
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
-  "packageSha256": "0f771f897ef993ac8fb6c954bbc4857ca88761e2447d4f2a2f2186f6480c8abe",
+  "packageSha256": "ac89f994f3f05f30cc14624c3694da645619788220c9bbefa15cf43ce34e1d61",
   "productionUploaded": false,
   "customerSenderEnabled": true,
-  "providerTesting": "Prior approved message accepted; new branded relay not deployed or live callback tested",
-  "phpRequirement": "PHP 8.1+ and curl for webhooks/whatsapp.php",
+  "automaticSetup": "Local tests passed; live PAT, provider mutation, hosted relay and signed callback checks pending",
+  "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
       "path": "index.html",
-      "sha256": "d781bbf991cfb1d366ef36a9e4ebb7798b6dc6c8ae65fd897cccdb55072c7dee"
+      "sha256": "8e1b4c60dec1bf6dac3a31afe15001506b419e1800f74499a6569f95b0d5f6d3"
     },
     {
       "path": ".htaccess",
-      "sha256": "287e9e6a7925614951f4b4f858c364684e74606b56ecd25a5b9fc9bb5dcf2ce3"
+      "sha256": "e937433a0ca30cbfae684ef2b0929d5122619f614d29868072131466e1c8b07e"
     },
     {
       "path": "favicon.svg",
@@ -37,8 +37,16 @@
       "sha256": "82269b061955a2e84021cbc299410c4dbf7c7191cab9310d4a1ba1cade79d30b"
     },
     {
-      "path": "assets/index-DWTfMaha.js",
-      "sha256": "e6c1699642dc6a328073a2168aaeec06200e1ba15ab18a8f1e1015953172d0c1"
+      "path": "connect/wasender.php",
+      "sha256": "aeb8691af83e5f2e0871ee67e53ec7b11a2f530a8b4f95f4170fb0568529b76c"
+    },
+    {
+      "path": "connect/setup-core.php",
+      "sha256": "d0eaf45497945e2178e37cab42e9bc76f87b7ab30e236d280791107e49222568"
+    },
+    {
+      "path": "assets/index-4XcfYmXg.js",
+      "sha256": "70a33764cb368764de3f0162dbc95d248b0d0d310c6166e6498b2362c298804f"
     },
     {
       "path": "assets/index-YLHMqxdG.css",

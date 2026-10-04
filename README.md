@@ -45,3 +45,5 @@ Enabled only V2 Customer Queue Every 15 Seconds in the existing 92-node workflow
 Import templates remain inactive with the customer schedule disabled intentionally. The published sender is now enabled; review settings before any reimport. See repository docs/saas-v2/sender-activation-2026-10-04.md and progress.json for the current checkpoint. Earlier deferred-activation notes are historical.
 
 2026-10-04: The upload package now includes clickable template fields, illustrative personalized previews, an example leads CSV, clearer WhatsApp setup and a branded webhook relay. This package requires PHP 8.1+ with curl for the relay; upload/callback verification remains pending. See docs/saas-v2/personalization-and-connection-guide.md.
+
+Automatic customer setup now uses a temporary account PAT and server-side webhook configuration. Local validation passed; hosted/PAT/callback verification remains pending. Read docs/saas-v2/automatic-customer-setup.md before deployment or live testing.
