@@ -1,9 +1,9 @@
 {
   "guide_sha256": "ae919a6559970032bb32fa981749cdf7f5c2b3183897f3c86017ec85e3dbe13f",
-  "date": "2026-10-03",
+  "date": "2026-10-04",
   "branch": "upgrade/saas-v2-foundation",
   "baseline_commit": "8f2f7dfff1607dfa4940b5efd91ace236b1da4e8",
-  "phase": "frontend_reviewed_packaged_activation_deferred",
+  "phase": "customer_sender_enabled_first_send_verified",
   "owner_email": "khurram@eightbitsolutions.com",
   "foundation_applied": true,
   "foundation_verified": true,
@@ -17,18 +17,18 @@
   "workflow_v2_imported": true,
   "frontend_cutover": false,
   "provider_mode": "customer_api_key",
-  "approval_gate": "Backend approved and installed; frontend reviewed; provider testing deferred by user; production frontend upload and activation pending",
+  "approval_gate": "Customer sender activation approved on 2026-10-04; one selected campaign message accepted and campaign completed; signed delivery callbacks and broader rollout checks remain pending",
   "storage_mode": "isolated_v2_queue",
   "multiple_connections_per_company": true,
   "customer_key_decision_approved": true,
   "frontend_wizard_implemented": true,
   "frontend_live_backend_read_verified": true,
-  "customer_sender_enabled": false,
+  "customer_sender_enabled": true,
   "frontend_professional_review_verified": true,
   "tested_phone_css_widths": [
     390,
     342
   ],
-  "provider_test_deferred_by_user": true,
+  "provider_test_deferred_by_user": false,
   "live_vault_rollback_fixture_verified": true
 }
