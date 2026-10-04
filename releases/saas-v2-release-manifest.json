@@ -2,15 +2,15 @@
   "date": "2026-10-04",
   "branch": "upgrade/saas-v2-foundation",
   "package": "WhatsApp-Automation-SaaS-cPanel-ready.zip",
-  "packageSha256": "da2f0c6e0397ad3469dc5c3e7a02a5077f787b1ca9dbddb5b92874b47ad36ed8",
-  "productionUploaded": true,
+  "packageSha256": "6665075195d959bde04e5f441516e1126b5df6092664bc9cc96d3cc8e1885196",
+  "productionUploaded": false,
   "customerSenderEnabled": true,
-  "automaticSetup": "Customer PAT lookup verified; error patch uploaded; archived connection name migration applied and live rollback-tested; actual provider connection save and signed callback pending",
+  "automaticSetup": "Owner-scoped pending recovery and safe backend error codes tested; provider phone corrected; latest recovery bundle awaits upload and real connection save/callback verification",
   "phpRequirement": "PHP 8.1+ with curl; allow Authorization header to PHP",
   "entries": [
     {
       "path": "index.html",
-      "sha256": "8e1b4c60dec1bf6dac3a31afe15001506b419e1800f74499a6569f95b0d5f6d3"
+      "sha256": "8965981d31df2ffbdaf17fb50e9e8c9db168e7dae8a2146f4974d29a34334004"
     },
     {
       "path": ".htaccess",
@@ -38,15 +38,15 @@
     },
     {
       "path": "connect/wasender.php",
-      "sha256": "6a9d5f30da3e193f59005b95076b205778468690abc00767fa8e7344752b86aa"
+      "sha256": "d58aa9742691c907a896503099839c9a5d2e0b02973102132e48a3b1b812f6a6"
     },
     {
       "path": "connect/setup-core.php",
-      "sha256": "921b6c262d87fa97dcfee810139e0302880f2cb70ddc8ca30437208f8fd4613d"
+      "sha256": "6245275bba23982f16f191b55a38e51980dc7d6c9f802e243536f15837586553"
     },
     {
-      "path": "assets/index-4XcfYmXg.js",
-      "sha256": "70a33764cb368764de3f0162dbc95d248b0d0d310c6166e6498b2362c298804f"
+      "path": "assets/index-DuwhzciE.js",
+      "sha256": "175c05ef7c0d02b7e8e0e4cfe9de954f19ee0087250710e654f69afe2ec29152"
     },
     {
       "path": "assets/index-YLHMqxdG.css",
@@ -57,5 +57,6 @@
       "sha256": "5166a393ffc4d1ccfea198aa4851b4cc23b128bd4820d941be9afb62578053e8"
     }
   ],
-  "hostedVerification": "2026-10-04: 8 public asset hashes matched; relay GET 405 JSON; setup GET 405 JSON; missing bearer POST 401; n8n active with success/error/manual/progress execution persistence disabled."
+  "hostedVerification": "2026-10-04: 8 public asset hashes matched; relay GET 405 JSON; setup GET 405 JSON; missing bearer POST 401; n8n active with success/error/manual/progress execution persistence disabled.",
+  "recoveryPackage": "WhatsApp-Automation-Recovery-cPanel-ready.zip"
 }

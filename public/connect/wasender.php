@@ -46,6 +46,11 @@ try {
             throw new SetupFailure('RELAY_UNAVAILABLE','Message update setup is unavailable. Contact support; your WASender settings have not been changed.',503);
         }
         $backend = str_starts_with($url,'https://n8n.eightbitsolutions.com/');
+        if ($backend && $ok!==false) {
+            $safeEnvelope = json_decode($response,true,32);
+            if (is_array($safeEnvelope) && ($safeEnvelope['success'] ?? null)===false && is_array($safeEnvelope['error'] ?? null))
+                throw setup_backend_failure($safeEnvelope,(string)($body['action'] ?? ''));
+        }
         if ($ok===false || $status<200 || $status>=300) throw setup_upstream_failure($backend,$status,$ok===false);
         try { $r=json_decode($response,true,32,JSON_THROW_ON_ERROR); }
         catch (JsonException $e) { throw new SetupFailure($backend?'BACKEND_RESPONSE':'WASENDER_RESPONSE','The connection service returned an unexpected response. Contact support.',502); }

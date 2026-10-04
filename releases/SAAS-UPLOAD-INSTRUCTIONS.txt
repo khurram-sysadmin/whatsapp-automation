@@ -4,3 +4,5 @@ The webhook relay requires PHP 8.1+ with curl. Verify that /webhooks/whatsapp.ph
 The n8n customer sender is already enabled; do not reimport inactive workflow templates. This ZIP upload does not change campaign data or keys. Latest bundle and file hashes: releases/saas-v2-release-manifest.json. Hosted upload and branded callback are not yet verified.
 
 Automatic setup additionally requires ALL connect/ files. Do not omit setup-core.php. Verify .htaccess Authorization forwarding, PHP curl and the branded relay before use. Current hosted relay returns 404. Provider PAT and signed callback tests pending; see docs/saas-v2/automatic-customer-setup.md.
+
+2026-10-04 recovery release: Upload WhatsApp-Automation-Recovery-cPanel-ready.zip and extract in the existing wamarketing product document root, replacing its public files. This supersedes the older two-file error patch. Preserve existing api and private directories. Refresh the dashboard, enter the account PAT privately, find/select the number, and use Finish connection. Do not remove the existing pending connection. This is an upload-ready release, not a completed provider/callback test.

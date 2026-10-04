@@ -11,6 +11,28 @@ function setup_upstream_failure(bool $backend, int $status, bool $network): Setu
     if ($status===429) return new SetupFailure('UPSTREAM_RATE_LIMITED','The connection service is busy. Wait a minute before trying again.',429);
     return new SetupFailure($backend?'BACKEND_REJECTED':'WASENDER_REQUEST_REJECTED', $backend?'Our connection service rejected the setup request. Contact support.':'WASender could not confirm this request. Check your account and connection status there before retrying.',502);
 }
+function setup_backend_failure(array $response, string $action): SetupFailure {
+    $messages = [
+        'UNAUTHORIZED'=>'Your sign-in expired. Sign in again.',
+        'FORBIDDEN'=>'Your company access could not be verified.',
+        'INVALID_REQUEST'=>'The connection request conflicts with its current state. Keep the existing connection and contact support.',
+        'REQUEST_CONFLICT'=>'This setup request was already used. Refresh before continuing.',
+        'NOT_FOUND'=>'The pending connection could not be found in this company.',
+        'PROVIDER_NOT_CONNECTED'=>'WASender could not verify the connected number. Check its phone mismatch warning and connection status.',
+        'PROVIDER_NOT_CONFIGURED'=>'WASender did not provide a usable session API key.',
+        'CONNECTION_IN_USE'=>'This WhatsApp number is already linked to another connection.',
+        'CONNECTION_MISMATCH'=>'This connection belongs to another WhatsApp number.',
+        'WEBHOOK_SECRET_IN_USE'=>'This webhook security key is already used by another connection.',
+        'CONNECTION_BUSY'=>'This connection has messages in progress. Finish those before changing it.',
+        'PLAN_LIMIT'=>'Your company has reached its WhatsApp connection limit.',
+        'SUBSCRIPTION_REQUIRED'=>'Your company needs an active subscription.',
+        'BACKEND_UNAVAILABLE'=>'The connection service is temporarily unavailable.',
+    ];
+    $code = $response['error']['code'] ?? '';
+    if (!is_string($code) || !isset($messages[$code])) return setup_upstream_failure(true,502,false);
+    $stage = ['bootstrap'=>'ACCOUNT','sessionList'=>'CONNECTION_LIST','sessionCreate'=>'CONNECTION_CREATE','sessionConnect'=>'CONNECTION_SAVE'][$action] ?? 'CONNECTION';
+    return new SetupFailure($stage.'_'.$code,$messages[$code],$code==='UNAUTHORIZED'?401:($code==='FORBIDDEN'?403:409));
+}
 // Transport is injected for isolated tests. No token, body or provider response
 // is persisted. Public callers cannot choose any upstream address.
 final class WhatsAppSetup {
@@ -43,8 +65,12 @@ final class WhatsAppSetup {
         if ($mode === 'list') {
             $data = $this->call('GET', $base, $pat)['data'] ?? null;
             if (!is_array($data) || !array_is_list($data) || count($data)>200) throw new SetupFailure('PROVIDER_RESPONSE', 'WASender returned an unexpected session list.', 502);
-            return ['sessions'=>array_map(static function(array $s): array {
-                return ['id'=>(string)($s['id'] ?? ''), 'name'=>substr((string)($s['name'] ?? ''),0,200), 'phone'=>substr((string)($s['phone_number'] ?? ''),0,30), 'status'=>strtolower((string)($s['status'] ?? 'unknown')), 'hasWebhook'=>!empty($s['webhook_url'])];
+            $known = $this->api($jwt, ['action'=>'sessionList','workspaceId'=>$wid,'requestId'=>$rid.'-sessions']);
+            $pendingUrls = [];
+            foreach ($known as $row) if (($row['status'] ?? '')==='pending' && ($row['configured'] ?? true)===false && ($row['providerMode'] ?? '')==='manual_session_key' && is_string($row['whatsappSessionId'] ?? null))
+                $pendingUrls[]='https://wamarketing.eightbitsolutions.com/webhooks/whatsapp.php?whatsappSessionId='.$row['whatsappSessionId'];
+            return ['sessions'=>array_map(static function(array $s) use ($pendingUrls): array {
+                return ['id'=>(string)($s['id'] ?? ''), 'name'=>substr((string)($s['name'] ?? ''),0,200), 'phone'=>substr((string)($s['phone_number'] ?? ''),0,30), 'status'=>strtolower((string)($s['status'] ?? 'unknown')), 'hasWebhook'=>!empty($s['webhook_url']), 'resumingSetup'=>in_array($s['webhook_url'] ?? '',$pendingUrls,true)];
             }, $data)];
         }
         $id = $p['providerSessionId'] ?? '';
@@ -57,20 +83,33 @@ final class WhatsAppSetup {
         $secret = $s['webhook_secret'] ?? '';
         if (!is_string($apiKey) || strlen($apiKey)<16) throw new SetupFailure('PROVIDER_RESPONSE', 'WASender did not return a session API key.', 502);
         $existing = (string)($s['webhook_url'] ?? '');
-        if (str_starts_with($existing, 'https://wamarketing.eightbitsolutions.com/webhooks/whatsapp.php?') || str_starts_with($existing, 'https://n8n.eightbitsolutions.com/webhook/eightbit-outreach/')) throw new SetupFailure('EXISTING_EIGHTBIT_CONNECTION', 'This number already has an EightBit connection. Open its existing connection or contact support; we will not transfer it automatically.', 409);
-        if ($existing !== '' && ($p['replaceWebhook'] ?? false) !== true) throw new SetupFailure('WEBHOOK_CONFIRMATION_REQUIRED', 'This number already has a webhook. Confirm replacement to connect it to this company.', 409);
         $sessions = $this->api($jwt, ['action'=>'sessionList','workspaceId'=>$wid,'requestId'=>$rid.'-sessions']);
+        $sid = '';
+        $prefix = 'https://wamarketing.eightbitsolutions.com/webhooks/whatsapp.php?whatsappSessionId=';
+        // Recover only an unconfigured pending row that the authenticated owner
+        // can already see in this company, with the provider URL matching exactly.
+        // Never reassign a configured number or trust a browser-provided row ID.
+        foreach ($sessions as $known) {
+            $candidate = $known['whatsappSessionId'] ?? '';
+            if (is_string($candidate) && preg_match('/^[a-f0-9-]{36}$/i',$candidate) && $existing===$prefix.$candidate
+                && ($known['status'] ?? '')==='pending' && ($known['configured'] ?? true)===false
+                && ($known['providerMode'] ?? '')==='manual_session_key') $sid=$candidate;
+        }
+        $resume = $sid !== '';
+        if (!$resume && (str_starts_with($existing, 'https://wamarketing.eightbitsolutions.com/webhooks/whatsapp.php') || str_starts_with($existing, 'https://n8n.eightbitsolutions.com/webhook/eightbit-outreach/'))) throw new SetupFailure('EXISTING_EIGHTBIT_CONNECTION', 'This number already has an EightBit connection. Open its existing connection or contact support; we will not transfer it automatically.', 409);
+        if (!$resume && $existing !== '' && ($p['replaceWebhook'] ?? false) !== true) throw new SetupFailure('WEBHOOK_CONFIRMATION_REQUIRED', 'This number already has a webhook. Confirm replacement to connect it to this company.', 409);
         foreach ($sessions as $known) if (($known['configured'] ?? false) && ($known['phoneE164'] ?? '') === ($s['phone_number'] ?? '')) throw new SetupFailure('ALREADY_CONNECTED', 'This number is already connected. Open its existing connection instead.', 409);
         $name = trim((string)($p['displayName'] ?? $s['name'] ?? 'WhatsApp'));
         if ($name === '' || strlen($name)>200) throw new SetupFailure('INVALID_REQUEST', 'Enter a connection name of up to 200 characters.');
         $this->call('CHECK', 'https://wamarketing.eightbitsolutions.com/webhooks/whatsapp.php', '');
-        $created = $this->api($jwt, ['action'=>'sessionCreate','workspaceId'=>$wid,'displayName'=>$name,'requestId'=>$rid.'-create']);
-        $sid = $created['whatsappSessionId'] ?? '';
+        if (!$resume) {
+            $created = $this->api($jwt, ['action'=>'sessionCreate','workspaceId'=>$wid,'displayName'=>$name,'requestId'=>$rid.'-create']);
+            $sid = $created['whatsappSessionId'] ?? '';
+        }
         if (!is_string($sid) || !preg_match('/^[a-f0-9-]{36}$/i', $sid)) throw new SetupFailure('BACKEND_RESPONSE', 'Unable to prepare your connection.', 502);
         $url = 'https://wamarketing.eightbitsolutions.com/webhooks/whatsapp.php?whatsappSessionId='.$sid;
         // Only change webhook configuration, never billing or unrelated settings.
-        $updated = $this->call('PUT', $base.'/'.$id, $pat, ['webhook_url'=>$url,'webhook_enabled'=>true,'webhook_events'=>['messages.upsert','messages.update','message-receipt.update','message.sent','session.status']]);
-        $u = $updated['data'] ?? [];
+        $u = $resume ? $s : ($this->call('PUT', $base.'/'.$id, $pat, ['webhook_url'=>$url,'webhook_enabled'=>true,'webhook_events'=>['messages.upsert','messages.update','message-receipt.update','message.sent','session.status']])['data'] ?? []);
         if (($u['webhook_url'] ?? '') !== $url || ($u['webhook_enabled'] ?? false) !== true) throw new SetupFailure('PROVIDER_RESPONSE', 'Webhook configuration was not confirmed. Refresh connections before retrying.', 502);
         $secret = $u['webhook_secret'] ?? $secret;
         $apiKey = $u['api_key'] ?? $apiKey;
