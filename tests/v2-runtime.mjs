@@ -18,6 +18,12 @@ await db.exec(read('../backend/supabase/v2-foundation/002-private-saas-tables.sq
 await db.exec(read('../backend/supabase/v2-review/004-isolated-storage.sql'));
 await db.exec(read('../backend/supabase/v2-review/supabase-v2-runtime.sql'));
 checks.push('Review schema and runtime SQL execute locally; Vault is mocked, not encryption-tested');
+const personalized = await db.query("SELECT outreach.personalize($1, $2::jsonb) message", ['Hi {{first_name}}, I saw your company, {{company}}.', JSON.stringify({first_name:'Khurram', company:'ITB Solutions'})]);
+assert.equal(personalized.rows[0].message, 'Hi Khurram, I saw your company, ITB Solutions.');
+const secondPersonalized = await db.query("SELECT outreach.personalize($1, $2::jsonb) message", ['Hi {{first_name}}, I saw your company, {{company}}.', JSON.stringify({first_name:'Ali', company:'Sysnova Solutions'})]);
+assert.equal(secondPersonalized.rows[0].message, 'Hi Ali, I saw your company, Sysnova Solutions.');
+checks.push('The same first-name and company template produces distinct messages from each lead');
+
 const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222',viewer='33333333-3333-4333-8333-333333333333';
 await db.query("INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES($1,'a@example.test','{}'),($2,'b@example.test','{}'),($3,'viewer@example.test','{}')",[a,b,viewer]);
 const covered=new Set();let seq=0;const api=async(uid,p,proof={})=>{covered.add(p.action);return (await db.query('SELECT public.eb_outreach_api_v2($1,$2::jsonb,$3::jsonb) r',[uid,JSON.stringify({requestId:'runtime-fixture-'+(++seq),...p}),JSON.stringify(proof)])).rows[0].r;};

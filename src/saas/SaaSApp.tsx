@@ -33,6 +33,7 @@ import {
   Inbox,
 } from "lucide-react";
 import "./saas.css";
+import { MessageEditor } from "./MessageEditor";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
   return (
     <div className="v2-welcome v2-welcome-loading" role="status">
@@ -258,28 +259,13 @@ function CampaignForm({
                 />
               </label>
               <p className="v2-muted">
-                CSV/Excel: name, first_name, company, phone, email, city,
+                <a href="/lead-import-example.csv" download>Download an example spreadsheet</a>. Replace its example leads with your own. Columns: name, first_name, company, phone, email, city,
                 industry. Use text cells and international phones. Up to 5 MB /
                 5,000 rows.
               </p>
             </>
           )}
-          <label className="v2-field">
-            Message
-            <textarea
-              value={template}
-              onChange={(e) => setTemplate(e.target.value)}
-              maxLength={4096}
-              required
-              rows={4}
-            />
-          </label>
-          <p className="v2-muted">
-            Variables:{" "}
-            {
-              "{{name}}, {{first_name}}, {{company}}, {{phone}}, {{email}}, {{city}}, {{industry}}"
-            }
-          </p>
+          <MessageEditor value={template} onChange={setTemplate} />
           <div className="v2-form-grid">
             <Field
               name="Timezone"
@@ -1650,23 +1636,7 @@ export default function SaaSApp() {
                         readOnly={Boolean(editingTemplate)}
                       />
                     </label>
-                    <label className="v2-field">
-                      Message
-                      <textarea
-                        name="body"
-                        defaultValue={editingTemplate?.body || ""}
-                        required
-                        maxLength={4096}
-                        rows={3}
-                      />
-                    </label>
-                    <p className="v2-muted">
-                      Personalize with{" "}
-                      {
-                        "{{name}}, {{first_name}}, {{company}}, {{phone}}, {{email}}, {{city}} or {{industry}}"
-                      }
-                      .
-                    </p>
+                    <MessageEditor name="body" defaultValue={editingTemplate?.body || ""} />
                     <button className="v2-primary" disabled={busy}>
                       Save template
                     </button>
@@ -2220,7 +2190,26 @@ function Connections({
     [webhookSecret, setWebhookSecret] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const webhookUrl = chosen?.whatsappSessionId ? new URL("/webhooks/whatsapp.php?whatsappSessionId=" + encodeURIComponent(chosen.whatsappSessionId), config.appUrl).href : "";
+  const [copied, setCopied] = useState("");
+  const copyUrl = async () => {
+    try { await navigator.clipboard.writeText(webhookUrl); setCopied("Webhook URL copied"); }
+    catch { setCopied("Select the URL and copy it manually."); }
+  };
+  const prepare = async () => {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      if (!chosen?.whatsappSessionId) {
+        setChosen(await action("sessionCreate", workspaceId, { displayName }));
+        await onRefresh();
+      }
+      setStep(2);
+    } catch (e) { setError(errorText(e)); }
+    finally { setBusy(false); }
+  };
   const close = () => {
+    setCopied("");
     setChosen(null);
     setStep(1);
     setApiSecret("");
@@ -2441,9 +2430,9 @@ function Connections({
               <>
                 <h3>Link your number in WASender</h3>
                 <ol className="v2-guide">
-                  <li>Sign in to your own WASender account.</li>
-                  <li>Create a WhatsApp session for this number.</li>
-                  <li>Scan the QR code with WhatsApp on your phone.</li>
+                  <li>Open WASender below and sign in to your account.</li>
+                  <li>Choose Connect WhatsApp / Add session. Enter the name, country and number requested there, then save.</li>
+                  <li>On your phone, open WhatsApp → Settings (iPhone) or ⋮ (Android) → Linked devices → Link a device. Scan the QR code shown in WASender.</li>
                   <li>Wait until WASender shows Connected.</li>
                 </ol>
                 <a
@@ -2454,13 +2443,22 @@ function Connections({
                 >
                   Open WASender
                 </a>
-                <button className="v2-primary" onClick={() => setStep(2)}>
-                  My number is connected
+                <Field name="Connection name" value={displayName} onChange={setDisplayName} required />
+                <p className="v2-muted">Use a label such as Sales team. Your company is already selected; the phone number is verified from WASender.</p>
+                <button className="v2-primary" disabled={busy || !displayName.trim()} onClick={() => void prepare()}>
+                  {busy ? "Preparing connection…" : "My number is connected — continue"}
                 </button>
               </>
             )}
             {step === 2 && (
               <form onSubmit={connect}>
+                <h3>Connect EightBit to your number</h3>
+                <p>In your WASender session settings, enable Webhooks and paste this URL. It is available now, before entering your keys.</p>
+                <label className="v2-field">Webhook URL<input readOnly value={webhookUrl} /></label>
+                <button type="button" onClick={() => void copyUrl()}>Copy webhook URL</button>
+                <p role="status" className="v2-muted">{copied}</p>
+                <p>Select messages.upsert, messages.update, message-receipt.update, message.sent and session.status, then save in WASender. These keep replies, delivery status and connection status up to date. Leave messages.delete, groups and reactions unchecked.</p>
+                <p>Copy this session’s API key and generated webhook secret from WASender below.</p>
                 <p>
                   Copy the API key from this WASender session’s details. Use the
                   session key, not an account Personal Access Token.
@@ -2481,7 +2479,7 @@ function Connections({
                   required
                 />
                 <Field
-                  name="Webhook secret (unique to this number, at least 16 characters)"
+                  name="WASender webhook secret"
                   type="password"
                   autoComplete="off"
                   minLength={16}
@@ -2490,8 +2488,7 @@ function Connections({
                   required
                 />
                 <p className="v2-muted">
-                  Use this webhook secret in the next step. Save it privately;
-                  stored secrets cannot be read back.
+                  Paste the webhook secret generated by WASender when you enable Webhooks. Keep it private and use the same value in both places; this is different from your API key.
                 </p>
                 <button disabled={busy} className="v2-primary">
                   {busy ? "Verifying number…" : "Verify and save connection"}
@@ -2502,14 +2499,21 @@ function Connections({
               <>
                 <h3>Enable message updates</h3>
                 <p>
-                  In this WASender session’s webhook settings, paste the URL
-                  below. Enter your webhook secret and enable message,
-                  delivery/read and session status events.
+                  Webhooks keep your inbox, delivery status and connection status up to date. In WASender, enable Webhooks and paste this URL. Keep the same webhook secret you copied to EightBit.
                 </p>
                 <label className="v2-field">
                   Webhook URL
-                  <input readOnly value={chosen.webhookUrl || ""} />
+                  <input readOnly value={webhookUrl} />
                 </label>
+                <button onClick={() => void copyUrl()}>Copy webhook URL</button>
+                <p role="status" className="v2-muted">{copied}</p>
+                <ul className="v2-guide">
+                  <li>messages.upsert — incoming replies.</li>
+                  <li>messages.update and message-receipt.update — delivery/read updates.</li>
+                  <li>message.sent — sent status.</li>
+                  <li>session.status — connection status.</li>
+                </ul>
+                <p className="v2-muted">Select these in WASender. Leave deletion, groups and reaction events unchecked. Save your WASender settings.</p>
                 {webhookSecret && (
                   <label className="v2-field">
                     Your webhook secret

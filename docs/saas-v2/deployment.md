@@ -34,3 +34,7 @@ Verify HTTPS, the exact bundle in the release manifest, login, a hard refresh, d
 The user deferred provider testing. Leave the new customer schedule disabled until real connection identity, signed callbacks, one authorized test message, concurrent leases and quotas are verified. Resolve the presentation/cutover of the owner's preserved v1 history before replacing production. Do not run two independently paced queues for the same owner number. Team management remains support-operated; there is no payment checkout.
 
 For rollback, restore the previous frontend/public files and keep the existing private folder. Disable customer scheduling/writes while retaining reconciliation for in-flight sends. Never discard unknown outcomes, delivery history or stored secrets to make a test pass.
+
+## Personalization and branded webhook package — 2026-10-04
+
+The latest package also includes webhooks/whatsapp.php and lead-import-example.csv. PHP 8.1+ and curl are now required for the relay. Deploy these with the frontend before using the newly displayed branded webhook URL. Preserve existing provider webhook URLs until a signed callback works through the branded endpoint. This upload remains unverified. See personalization-and-connection-guide.md for rollout checks.

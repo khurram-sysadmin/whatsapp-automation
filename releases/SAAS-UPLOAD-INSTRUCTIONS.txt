@@ -1,5 +1,4 @@
-SaaS upgrade static package: WhatsApp-Automation-SaaS-cPanel-ready.zip
-Read docs/saas-v2/deployment.md before uploading. This frontend has not yet been uploaded to production.
-Extract contents directly into the wamarketing.eightbitsolutions.com document root verified in cPanel Domains. Include hidden .htaccess. Preserve the existing api/ and external private folder for v1/rollback.
-The package contains public frontend files only. Backend installation is a separate operation and has already been approved/applied. Customer schedule stays disabled while provider tests are deferred. Resolve v1 history/cutover and remaining checks before activation.
-Hashes: releases/saas-v2-release-manifest.json. Verification: docs/saas-v2/frontend-validation.md.
+WhatsApp-Automation-SaaS-cPanel-ready.zip — 2026-10-04
+Extract all contents into the existing wamarketing.eightbitsolutions.com document root. Include .htaccess, assets/, lead-import-example.csv and webhooks/whatsapp.php. Preserve existing api/ and private storage.
+The webhook relay requires PHP 8.1+ with curl. Verify that /webhooks/whatsapp.php returns HTTP 405 JSON on a GET request and never exposes PHP source. Verify a signed WASender callback before changing an existing connection to the branded URL. Existing provider URLs can remain until this succeeds. See docs/saas-v2/personalization-and-connection-guide.md.
+The n8n customer sender is already enabled; do not reimport inactive workflow templates. This ZIP upload does not change campaign data or keys. Latest bundle and file hashes: releases/saas-v2-release-manifest.json. Hosted upload and branded callback are not yet verified.
