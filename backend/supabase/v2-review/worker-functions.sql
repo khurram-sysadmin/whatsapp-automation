@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION outreach_v2.claim_next_v2() RETURNS SETOF jsonb LANGU
 DECLARE s outreach.whatsapp_sessions; m outreach_v2.messages;
 BEGIN
  FOR s IN SELECT ws.* FROM outreach.whatsapp_sessions ws JOIN outreach.session_sender_settings cfg ON cfg.whatsapp_session_id=ws.id JOIN public.workspaces w ON w.id=ws.workspace_id JOIN public.subscriptions su ON su.workspace_id=w.id JOIN public.plans pl ON pl.code=su.plan_code
- WHERE ws.deleted_at IS NULL AND ws.status='connected' AND ws.api_key_secret_id IS NOT NULL AND cfg.enabled AND cfg.next_send_at<=now() AND w.status='active' AND su.status IN ('active','trialing') AND pl.active
+ WHERE ws.deleted_at IS NULL AND ws.status='connected' AND ws.api_key_secret_id IS NOT NULL AND cfg.enabled AND cfg.next_send_at<=now() AND w.status='active' AND (su.status='active' OR (su.status='trialing' AND (su.trial_ends_at IS NULL OR su.trial_ends_at>now()))) AND pl.active
  AND (pl.max_monthly_messages IS NULL OR coalesce((SELECT messages_sent FROM outreach.usage_monthly WHERE workspace_id=w.id AND period_start=date_trunc('month',now())::date),0)+(SELECT count(*) FROM outreach_v2.messages x WHERE x.workspace_id=w.id AND x.status IN ('leased','dispatching','unknown'))<pl.max_monthly_messages)
  ORDER BY cfg.next_send_at,ws.id LIMIT 20 FOR UPDATE OF ws SKIP LOCKED LOOP
   IF EXISTS(SELECT 1 FROM outreach_v2.messages WHERE whatsapp_session_id=s.id AND status IN ('leased','dispatching','unknown')) THEN CONTINUE; END IF;
@@ -33,7 +33,7 @@ BEGIN
   UPDATE outreach_v2.messages SET status='canceled',lease_token=NULL,lease_until=NULL,error='Campaign stopped or recipient suppressed' WHERE id=mid; PERFORM outreach_v2.complete_v2(m.campaign_id); RETURN '{}'::jsonb;
  END IF;
  IF s.status<>'connected' OR s.deleted_at IS NOT NULL OR s.api_key_secret_id IS NULL OR NOT cfg.enabled OR cfg.next_send_at>now()
- OR NOT EXISTS(SELECT 1 FROM public.workspaces w JOIN public.subscriptions su ON su.workspace_id=w.id WHERE w.id=m.workspace_id AND w.status='active' AND su.status IN ('active','trialing'))
+ OR NOT EXISTS(SELECT 1 FROM public.workspaces w JOIN public.subscriptions su ON su.workspace_id=w.id WHERE w.id=m.workspace_id AND w.status='active' AND (su.status='active' OR (su.status='trialing' AND (su.trial_ends_at IS NULL OR su.trial_ends_at>now()))))
  OR EXISTS(SELECT 1 FROM outreach_v2.messages q WHERE q.whatsapp_session_id=s.id AND q.id<>mid AND q.status IN ('dispatching','unknown'))
  OR (m.campaign_id IS NOT NULL AND (c.status<>'running' OR c.next_send_at>now() OR NOT CASE WHEN c.sending_start_time=c.sending_end_time THEN true WHEN c.sending_start_time<c.sending_end_time THEN (now() AT TIME ZONE c.timezone)::time>=c.sending_start_time AND (now() AT TIME ZONE c.timezone)::time<c.sending_end_time ELSE (now() AT TIME ZONE c.timezone)::time>=c.sending_start_time OR (now() AT TIME ZONE c.timezone)::time<c.sending_end_time END)) THEN
   UPDATE outreach_v2.messages SET status='queued',lease_token=NULL,lease_until=NULL WHERE id=mid; RETURN '{}'::jsonb;

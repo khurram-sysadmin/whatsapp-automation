@@ -1,0 +1,11 @@
+STAGING ONLY
+
+1. Create a separate cPanel subdomain/document root. Do not use the client's existing document root.
+2. Create a separate Supabase project and separate n8n workflow first.
+3. Copy .env.test.example to private .env.test and fill only staging credentials.
+4. Build this branch with the staging environment file, then upload the resulting public files to the staging document root.
+5. Preserve staging private storage separately from production private storage.
+6. Keep the staging n8n scheduler disabled until an authorized test number is connected.
+
+Do not upload this package to production. Do not apply the trial migration to the client's production Supabase project until staging verification and payment-provider decisions are complete.
+

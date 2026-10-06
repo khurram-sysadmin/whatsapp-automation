@@ -17,6 +17,7 @@ import { Modal } from '../ui/Modal';
 import type { Template, ImportValidationResult, SuppressionNumber } from '../../types';
 import { ApiService } from '../../services/api';
 import { useToast } from '../ui/Toast';
+import { TIME_ZONES, timeZoneLabel } from '../../utils/timezones';
 
 interface CampaignWizardModalProps {
   isOpen: boolean;
@@ -267,9 +268,7 @@ export const CampaignWizardModal: React.FC<CampaignWizardModalProps> = ({
                   onChange={e => setTimezone(e.target.value)}
                   className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:border-[#FF5533] focus:bg-white text-[#09090B]"
                 >
-                  <option value="Asia/Karachi">Asia/Karachi (PKT, UTC+5)</option>
-                  <option value="Asia/Dubai">Asia/Dubai (GST, UTC+4)</option>
-                  <option value="Europe/London">Europe/London (GMT/BST, UTC+0)</option>
+                  {TIME_ZONES.map((zone) => <option key={zone} value={zone}>{timeZoneLabel(zone)}</option>)}
                   <option value="America/New_York">America/New_York (EST/EDT, UTC-5)</option>
                   <option value="America/Chicago">America/Chicago (CST/CDT, UTC-6)</option>
                   <option value="America/Denver">America/Denver (MST/MDT, UTC-7)</option>

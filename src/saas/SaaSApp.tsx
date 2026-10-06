@@ -33,6 +33,7 @@ import {
   Inbox,
 } from "lucide-react";
 import "./saas.css";
+import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
 import { MessageEditor } from "./MessageEditor";
 import { AutomaticConnection } from "./AutomaticConnection";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
@@ -272,6 +273,7 @@ function CampaignForm({
               name="Timezone"
               value={timezone}
               onChange={setTimezone}
+              options={TIME_ZONES.map((zone) => ({ value: zone, label: timeZoneLabel(zone) }))}
               required
             />
             <Field
@@ -434,6 +436,7 @@ function Field({
   max,
   autoComplete,
   minLength,
+  options,
 }: {
   name: string;
   type?: string;
@@ -444,11 +447,18 @@ function Field({
   max?: number;
   autoComplete?: string;
   minLength?: number;
+  options?: Array<{ value: string; label: string }>;
 }) {
   return (
     <label className="v2-field">
       {name}
-      <input
+      {options ? <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+      >
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select> : <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -459,7 +469,7 @@ function Field({
         autoComplete={
           autoComplete || (type === "password" ? "new-password" : undefined)
         }
-      />
+      />}
     </label>
   );
 }
@@ -1669,6 +1679,12 @@ export default function SaaSApp() {
                 {displayStatus(subscription.planCode || "Loading")} plan ·{" "}
                 {displayStatus(subscription.status)}
               </h3>
+              {subscription.status === "trialing" && subscription.trialEndsAt && (
+                <p className="v2-notice">Your free trial ends {new Date(subscription.trialEndsAt).toLocaleString()}.</p>
+              )}
+              {subscription.status === "expired" && (
+                <p className="v2-error" role="alert">Your free trial has ended. Choose a paid plan to continue sending.</p>
+              )}
               <div className="v2-form-grid">
                 {[
                   ["WhatsApp accounts", subscription.whatsappSessionLimit],
@@ -1690,7 +1706,7 @@ export default function SaaSApp() {
               </div>
               <p>{count(usage.messagesSent)} messages sent this month.</p>
               <p className="v2-muted">
-                Contact EightBit support to discuss your plan or usage limits.
+                Paid checkout will appear here after the test payment provider is selected and configured.
               </p>
             </section>
           )}
@@ -1765,12 +1781,14 @@ export default function SaaSApp() {
                   </label>
                   <label className="v2-field">
                     Timezone
-                    <input
+                    <select
                       name="timezone"
                       defaultValue={workspace?.timezone || config.timezone}
                       required
                       disabled={!canManage}
-                    />
+                    >
+                      {TIME_ZONES.map((zone) => <option key={zone} value={zone}>{timeZoneLabel(zone)}</option>)}
+                    </select>
                   </label>
                   {canManage && (
                     <button className="v2-primary" disabled={busy}>
@@ -2158,6 +2176,7 @@ export function Company({ onCreated, fullName = "" }: { onCreated: (id: string) 
             name="Timezone"
             value={timezone}
             onChange={(value) => { setTimezone(value); if (!value.trim()) setDetailStage(companyName.trim() ? "timezone" : "company"); }}
+            options={TIME_ZONES.map((zone) => ({ value: zone, label: timeZoneLabel(zone) }))}
             required
           />
           </div>

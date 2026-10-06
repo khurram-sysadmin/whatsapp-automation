@@ -80,7 +80,7 @@ BEGIN
   IF length(btrim(coalesce(p->>'companyName',''))) NOT BETWEEN 1 AND 200 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=coalesce(p->>'timezone','Asia/Karachi')) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Enter a company name and valid timezone.'); END IF;
   INSERT INTO public.workspaces(company_name,slug,timezone,created_by,onboarding_step) VALUES(btrim(p->>'companyName'),'company-'||gen_random_uuid(),coalesce(p->>'timezone','Asia/Karachi'),uid,'whatsapp') RETURNING id INTO inserted_id;
   INSERT INTO public.workspace_members(workspace_id,user_id,role) VALUES(inserted_id,uid,'owner');
-  INSERT INTO public.subscriptions(workspace_id,plan_code,status) VALUES(inserted_id,'beta','active');
+  INSERT INTO public.subscriptions(workspace_id,plan_code,status,trial_ends_at) VALUES(inserted_id,'trial','trialing',now()+interval '3 days');
   response:=jsonb_build_object('workspaceId',inserted_id);
  WHEN 'workspaceUpdate' THEN
   IF length(btrim(coalesce(p->>'companyName',''))) NOT BETWEEN 1 AND 200 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=coalesce(p->>'timezone','')) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Enter a company name and valid timezone.'); END IF;
@@ -222,7 +222,7 @@ BEGIN
  WHEN 'markConversationRead' THEN
   IF conv_id IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Select a conversation.'); END IF;
   UPDATE outreach.conversations SET unread_count=0,updated_at=now() WHERE id=conv_id; response:=jsonb_build_object('conversationId',conv_id,'unreadCount',0);
- WHEN 'subscription' THEN SELECT jsonb_build_object('planCode',su.plan_code,'status',su.status,'whatsappSessionLimit',pl.max_whatsapp_sessions,'teamMemberLimit',pl.max_team_members,'contactLimit',pl.max_contacts,'monthlyMessageLimit',pl.max_monthly_messages) INTO response FROM public.subscriptions su JOIN public.plans pl ON pl.code=su.plan_code WHERE su.workspace_id=wid;
+ WHEN 'subscription' THEN SELECT jsonb_build_object('planCode',su.plan_code,'status',CASE WHEN su.status='trialing' AND su.trial_ends_at IS NOT NULL AND su.trial_ends_at<=now() THEN 'expired' ELSE su.status END,'trialEndsAt',su.trial_ends_at,'currentPeriodEnd',su.current_period_end,'billingProvider',su.billing_provider,'checkoutUrl',su.checkout_url,'whatsappSessionLimit',pl.max_whatsapp_sessions,'teamMemberLimit',pl.max_team_members,'contactLimit',pl.max_contacts,'monthlyMessageLimit',pl.max_monthly_messages) INTO response FROM public.subscriptions su JOIN public.plans pl ON pl.code=su.plan_code WHERE su.workspace_id=wid;
  WHEN 'usage' THEN SELECT jsonb_build_object('messagesSent',coalesce(q.messages_sent,0),'campaignsStarted',coalesce(q.campaigns_started,0),'contactsImported',coalesce(q.contacts_imported,0)) INTO response FROM (SELECT 1) seed LEFT JOIN outreach.usage_monthly q ON q.workspace_id=wid AND q.period_start=date_trunc('month',now())::date;
  WHEN 'health' THEN response:=jsonb_build_object('backendReady',true,'providerMode','customer_api_key','schemaVersion',2);
  END CASE;
@@ -243,7 +243,7 @@ CREATE OR REPLACE FUNCTION outreach_v2.claim_next_v2() RETURNS SETOF jsonb LANGU
 DECLARE s outreach.whatsapp_sessions; m outreach_v2.messages;
 BEGIN
  FOR s IN SELECT ws.* FROM outreach.whatsapp_sessions ws JOIN outreach.session_sender_settings cfg ON cfg.whatsapp_session_id=ws.id JOIN public.workspaces w ON w.id=ws.workspace_id JOIN public.subscriptions su ON su.workspace_id=w.id JOIN public.plans pl ON pl.code=su.plan_code
- WHERE ws.deleted_at IS NULL AND ws.status='connected' AND ws.api_key_secret_id IS NOT NULL AND cfg.enabled AND cfg.next_send_at<=now() AND w.status='active' AND su.status IN ('active','trialing') AND pl.active
+ WHERE ws.deleted_at IS NULL AND ws.status='connected' AND ws.api_key_secret_id IS NOT NULL AND cfg.enabled AND cfg.next_send_at<=now() AND w.status='active' AND (su.status='active' OR (su.status='trialing' AND (su.trial_ends_at IS NULL OR su.trial_ends_at>now()))) AND pl.active
  AND (pl.max_monthly_messages IS NULL OR coalesce((SELECT messages_sent FROM outreach.usage_monthly WHERE workspace_id=w.id AND period_start=date_trunc('month',now())::date),0)+(SELECT count(*) FROM outreach_v2.messages x WHERE x.workspace_id=w.id AND x.status IN ('leased','dispatching','unknown'))<pl.max_monthly_messages)
  ORDER BY cfg.next_send_at,ws.id LIMIT 20 FOR UPDATE OF ws SKIP LOCKED LOOP
   IF EXISTS(SELECT 1 FROM outreach_v2.messages WHERE whatsapp_session_id=s.id AND status IN ('leased','dispatching','unknown')) THEN CONTINUE; END IF;
@@ -273,7 +273,7 @@ BEGIN
   UPDATE outreach_v2.messages SET status='canceled',lease_token=NULL,lease_until=NULL,error='Campaign stopped or recipient suppressed' WHERE id=mid; PERFORM outreach_v2.complete_v2(m.campaign_id); RETURN '{}'::jsonb;
  END IF;
  IF s.status<>'connected' OR s.deleted_at IS NOT NULL OR s.api_key_secret_id IS NULL OR NOT cfg.enabled OR cfg.next_send_at>now()
- OR NOT EXISTS(SELECT 1 FROM public.workspaces w JOIN public.subscriptions su ON su.workspace_id=w.id WHERE w.id=m.workspace_id AND w.status='active' AND su.status IN ('active','trialing'))
+ OR NOT EXISTS(SELECT 1 FROM public.workspaces w JOIN public.subscriptions su ON su.workspace_id=w.id WHERE w.id=m.workspace_id AND w.status='active' AND (su.status='active' OR (su.status='trialing' AND (su.trial_ends_at IS NULL OR su.trial_ends_at>now()))))
  OR EXISTS(SELECT 1 FROM outreach_v2.messages q WHERE q.whatsapp_session_id=s.id AND q.id<>mid AND q.status IN ('dispatching','unknown'))
  OR (m.campaign_id IS NOT NULL AND (c.status<>'running' OR c.next_send_at>now() OR NOT CASE WHEN c.sending_start_time=c.sending_end_time THEN true WHEN c.sending_start_time<c.sending_end_time THEN (now() AT TIME ZONE c.timezone)::time>=c.sending_start_time AND (now() AT TIME ZONE c.timezone)::time<c.sending_end_time ELSE (now() AT TIME ZONE c.timezone)::time>=c.sending_start_time OR (now() AT TIME ZONE c.timezone)::time<c.sending_end_time END)) THEN
   UPDATE outreach_v2.messages SET status='queued',lease_token=NULL,lease_until=NULL WHERE id=mid; RETURN '{}'::jsonb;
