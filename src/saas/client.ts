@@ -245,6 +245,15 @@ export async function uploadMedia(workspaceId: string, file: File) {
   const path = `${workspaceId}/${crypto.randomUUID()}-${safe}`;
   const { error } = await supabase.storage.from("outreach-media").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
   if (error) throw new Error("The attachment could not be uploaded. Please try again.");
-  const { data } = supabase.storage.from("outreach-media").getPublicUrl(path);
-  return { url: data.publicUrl, mime: file.type, filename: file.name, size: file.size };
+  // Production media storage is private. The signed URL is short-lived and
+  // scoped to the uploaded object, while still giving WASender access during
+  // the campaign send window without exposing the bucket publicly.
+  const { data, error: signedUrlError } = await supabase.storage
+    .from("outreach-media")
+    .createSignedUrl(path, 7 * 24 * 60 * 60);
+  if (signedUrlError || !data?.signedUrl) {
+    await supabase.storage.from("outreach-media").remove([path]);
+    throw new Error("The attachment URL could not be secured. Please try again.");
+  }
+  return { url: data.signedUrl, mime: file.type, filename: file.name, size: file.size };
 }
