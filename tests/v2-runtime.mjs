@@ -17,6 +17,7 @@ await db.exec(read('../backend/supabase/v2-foundation/001-identity.sql').replace
 await db.exec(read('../backend/supabase/v2-foundation/002-private-saas-tables.sql'));
 await db.exec(read('../backend/supabase/v2-review/004-isolated-storage.sql'));
 await db.exec(read('../backend/supabase/v2-review/006-media-messages.sql'));
+await db.exec(read('../backend/supabase/v2-review/008-admin-usage-reporting.sql'));
 await db.exec(read('../backend/supabase/v2-foundation/004-subscriptions-and-trials.sql'));
 await db.exec(read('../backend/supabase/v2-review/supabase-v2-runtime.sql'));
 await db.exec(read('../backend/supabase/v2-review/007-active-connection-names.sql'));

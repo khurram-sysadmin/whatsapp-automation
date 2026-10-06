@@ -7,14 +7,14 @@ DECLARE a text:=p->>'action'; rid text:=coalesce(p->>'requestId','req_'||gen_ran
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM auth.users WHERE id=uid) THEN RETURN outreach_v2.result_v2(rid,NULL,'UNAUTHORIZED','Sign in again.'); END IF;
  IF p IS NULL OR jsonb_typeof(p)<>'object' OR a IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Choose an action.'); END IF;
- IF a<>ALL(ARRAY['bootstrap','workspaceCreate','workspaceUpdate','profileUpdate','sessionList','sessionCreate','sessionConnect','sessionStatus','sessionDisconnect','sessionDelete','create','list','detail','start','pause','resume','stop','delete','stats','messages','contacts','templates','saveTemplate','suppress','inbox','conversation','reply','markConversationRead','subscription','usage','health','import']) THEN
+ IF a<>ALL(ARRAY['bootstrap','adminOverview','workspaceCreate','workspaceUpdate','profileUpdate','sessionList','sessionCreate','sessionConnect','sessionStatus','sessionDisconnect','sessionDelete','create','list','detail','start','pause','resume','stop','delete','stats','messages','contacts','templates','saveTemplate','suppress','inbox','conversation','reply','markConversationRead','subscription','usage','health','import']) THEN
   RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Unknown action.');
  END IF;
  wid:=nullif(p->>'workspaceId','')::uuid; IF a IN ('workspaceCreate','profileUpdate') THEN wid:=NULL; END IF; sid:=nullif(p->>'whatsappSessionId','')::uuid; cid:=nullif(p->>'campaignId','')::uuid; conv_id:=nullif(p->>'conversationId','')::uuid;
  is_write:=a=ANY(ARRAY['workspaceCreate','workspaceUpdate','profileUpdate','sessionCreate','sessionConnect','sessionDisconnect','sessionDelete','create','start','pause','resume','stop','delete','saveTemplate','suppress','reply','markConversationRead','import']);
  IF is_write AND (p->>'requestId' IS NULL OR length(p->>'requestId') NOT BETWEEN 8 AND 128) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','requestId must contain 8–128 characters.'); END IF;
  IF wid IS NOT NULL AND NOT outreach_v2.allowed_v2(wid,uid) THEN RETURN outreach_v2.result_v2(rid,NULL,'FORBIDDEN','Workspace access denied.'); END IF;
- IF a<>ALL(ARRAY['bootstrap','workspaceCreate','profileUpdate']) AND wid IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','workspaceId is required.'); END IF;
+ IF a<>ALL(ARRAY['bootstrap','adminOverview','workspaceCreate','profileUpdate']) AND wid IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','workspaceId is required.'); END IF;
  IF is_write AND wid IS NOT NULL THEN
   IF NOT outreach_v2.allowed_v2(wid,uid,CASE WHEN a=ANY(ARRAY['workspaceUpdate','sessionCreate','sessionConnect','sessionDisconnect','sessionDelete']) THEN ARRAY['owner','admin'] ELSE ARRAY['owner','admin','agent'] END) THEN RETURN outreach_v2.result_v2(rid,NULL,'FORBIDDEN','Your role cannot perform this action.'); END IF;
  END IF;
@@ -44,6 +44,8 @@ BEGIN
  CASE a
  WHEN 'bootstrap' THEN
   SELECT jsonb_build_object('user',jsonb_build_object('userId',u.id,'email',u.email,'fullName',coalesce(pr.full_name,'')),'workspaces',coalesce((SELECT jsonb_agg(jsonb_build_object('workspaceId',w.id,'companyName',w.company_name,'timezone',w.timezone,'status',w.status,'role',m.role,'onboardingStep',w.onboarding_step) ORDER BY w.created_at) FROM public.workspaces w JOIN public.workspace_members m ON m.workspace_id=w.id WHERE m.user_id=uid),'[]'::jsonb),'currentWorkspaceId',(SELECT workspace_id FROM public.workspace_members WHERE user_id=uid ORDER BY joined_at LIMIT 1),'providerMode','customer_api_key') INTO response FROM auth.users u LEFT JOIN public.profiles pr ON pr.user_id=u.id WHERE u.id=uid;
+ WHEN 'adminOverview' THEN
+  BEGIN response:=outreach_v2.admin_usage_v2(uid); EXCEPTION WHEN insufficient_privilege THEN RETURN outreach_v2.result_v2(rid,NULL,'FORBIDDEN','Platform admin access required.'); END;
  WHEN 'workspaceCreate' THEN
   IF length(btrim(coalesce(p->>'companyName',''))) NOT BETWEEN 1 AND 200 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=coalesce(p->>'timezone','Asia/Karachi')) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Enter a company name and valid timezone.'); END IF;
   INSERT INTO public.workspaces(company_name,slug,timezone,created_by,onboarding_step) VALUES(btrim(p->>'companyName'),'company-'||gen_random_uuid(),coalesce(p->>'timezone','Asia/Karachi'),uid,'whatsapp') RETURNING id INTO inserted_id;
