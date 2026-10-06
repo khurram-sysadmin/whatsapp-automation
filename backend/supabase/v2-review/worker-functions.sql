@@ -15,7 +15,7 @@ BEGIN
   ORDER BY q.scheduled_at,q.id LIMIT 1 FOR UPDATE OF q SKIP LOCKED;
   IF FOUND THEN
    UPDATE outreach_v2.messages SET status='leased',lease_token=gen_random_uuid(),lease_until=now()+interval '2 minutes' WHERE id=m.id RETURNING * INTO m;
-   RETURN NEXT jsonb_build_object('messageId',m.id,'leaseToken',m.lease_token,'workspaceId',m.workspace_id,'campaignId',m.campaign_id,'whatsappSessionId',m.whatsapp_session_id,'contactId',m.workspace_contact_id,'phoneE164',m.phone_e164,'personalizedMessage',m.personalized_message);
+   RETURN NEXT jsonb_build_object('messageId',m.id,'leaseToken',m.lease_token,'workspaceId',m.workspace_id,'campaignId',m.campaign_id,'whatsappSessionId',m.whatsapp_session_id,'contactId',m.workspace_contact_id,'phoneE164',m.phone_e164,'personalizedMessage',m.personalized_message,'mediaType',m.media_type,'mediaUrl',m.media_url,'mediaMime',m.media_mime,'mediaFilename',m.media_filename,'mediaSizeBytes',m.media_size_bytes);
   END IF;
  END LOOP;
 END $$;
@@ -43,7 +43,7 @@ BEGIN
  UPDATE outreach.session_sender_settings SET next_send_at=now()+make_interval(secs=>min_interval_seconds) WHERE whatsapp_session_id=s.id;
  UPDATE outreach_v2.campaigns SET next_send_at=now()+make_interval(secs=>send_interval_seconds) WHERE id=m.campaign_id;
  UPDATE outreach_v2.messages SET status='dispatching',attempts=attempts+1,provider_response=NULL,dispatch_started_at=now(),lease_until=now()+interval '5 minutes' WHERE id=mid;
- RETURN jsonb_build_object('messageId',m.id,'leaseToken',token,'workspaceId',m.workspace_id,'campaignId',m.campaign_id,'whatsappSessionId',s.id,'contactId',m.workspace_contact_id,'phoneE164',m.phone_e164,'personalizedMessage',m.personalized_message,'apiSecret',api_key);
+ RETURN jsonb_build_object('messageId',m.id,'leaseToken',token,'workspaceId',m.workspace_id,'campaignId',m.campaign_id,'whatsappSessionId',s.id,'contactId',m.workspace_contact_id,'phoneE164',m.phone_e164,'personalizedMessage',m.personalized_message,'mediaType',m.media_type,'mediaUrl',m.media_url,'mediaMime',m.media_mime,'mediaFilename',m.media_filename,'mediaSizeBytes',m.media_size_bytes,'apiSecret',api_key);
 END $$;
 CREATE OR REPLACE FUNCTION outreach_v2.finish_send_v2(p jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE m outreach_v2.messages; state text; outcome text:=p->>'outcome'; convo uuid; outbound uuid;
@@ -62,7 +62,7 @@ BEGIN
   INSERT INTO outreach.usage_monthly(workspace_id,period_start,messages_sent) VALUES(m.workspace_id,date_trunc('month',now())::date,1) ON CONFLICT(workspace_id,period_start) DO UPDATE SET messages_sent=outreach.usage_monthly.messages_sent+1;
   IF m.conversation_message_id IS NULL THEN
    INSERT INTO outreach.conversations(workspace_id,whatsapp_session_id,workspace_contact_id) VALUES(m.workspace_id,m.whatsapp_session_id,m.workspace_contact_id) ON CONFLICT(workspace_id,whatsapp_session_id,workspace_contact_id) DO UPDATE SET updated_at=now() RETURNING id INTO convo;
-   INSERT INTO outreach.conversation_messages(workspace_id,conversation_id,whatsapp_session_id,workspace_contact_id,direction,body,status,provider_message_id) VALUES(m.workspace_id,convo,m.whatsapp_session_id,m.workspace_contact_id,'outbound',m.personalized_message,'sent',p->>'providerMessageId') RETURNING id INTO outbound;
+   INSERT INTO outreach.conversation_messages(workspace_id,conversation_id,whatsapp_session_id,workspace_contact_id,direction,body,media_type,media_url,media_mime,media_filename,media_size_bytes,status,provider_message_id) VALUES(m.workspace_id,convo,m.whatsapp_session_id,m.workspace_contact_id,'outbound',m.personalized_message,m.media_type,m.media_url,m.media_mime,m.media_filename,m.media_size_bytes,'sent',p->>'providerMessageId') RETURNING id INTO outbound;
    UPDATE outreach_v2.messages SET conversation_message_id=outbound WHERE id=m.id;
    UPDATE outreach.conversations SET last_message_preview=left(m.personalized_message,200),last_message_at=now(),updated_at=now() WHERE id=convo;
   END IF;

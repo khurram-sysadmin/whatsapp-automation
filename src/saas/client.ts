@@ -238,3 +238,13 @@ export async function importContacts(
   ids.delete(scope);
   return result;
 }
+export async function uploadMedia(workspaceId: string, file: File) {
+  if (!supabase) throw new Error("Media upload is unavailable. Please try again later.");
+  if (file.size > 100 * 1024 * 1024) throw new Error("Attachments must be 100 MB or smaller.");
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "attachment";
+  const path = `${workspaceId}/${crypto.randomUUID()}-${safe}`;
+  const { error } = await supabase.storage.from("outreach-media").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
+  if (error) throw new Error("The attachment could not be uploaded. Please try again.");
+  const { data } = supabase.storage.from("outreach-media").getPublicUrl(path);
+  return { url: data.publicUrl, mime: file.type, filename: file.name, size: file.size };
+}

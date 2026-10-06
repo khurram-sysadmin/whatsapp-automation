@@ -84,6 +84,11 @@
       "purpose": "Status Verified"
     },
     {
+      "name": "V2 Record Connection Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "purpose": "Record Connection Check"
+    },
+    {
       "name": "V2 Verify WASender Phone",
       "type": "n8n-nodes-base.httpRequest",
       "purpose": "Verify WASender Phone"
@@ -257,11 +262,6 @@
       "name": "V2 Commit Customer Send Outcome",
       "type": "n8n-nodes-base.httpRequest",
       "purpose": "Commit Customer Send Outcome"
-    },
-    {
-      "name": "V2 Record Connection Check",
-      "type": "n8n-nodes-base.httpRequest",
-      "purpose": "Private latest failed verification phase/status/reason only; no keys, phone or provider body."
     }
   ],
   "totalNodes": 93,
@@ -273,6 +273,5 @@
   "requiredCredential": "Existing operator Supabase account 2 (supabaseApi); credential reference only",
   "requiredVariable": null,
   "customerWorkerDisabled": true,
-  "reviewBeforeImport": true,
-  "addedNodesCount": 52
+  "reviewBeforeImport": true
 }

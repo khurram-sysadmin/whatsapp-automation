@@ -8,6 +8,7 @@ import {
   OutreachError,
   count,
   importContacts,
+  uploadMedia,
   label,
   list,
   rows,
@@ -34,7 +35,7 @@ import {
 } from "lucide-react";
 import "./saas.css";
 import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
-import { MessageEditor } from "./MessageEditor";
+import { MessageEditor, type MediaDraft } from "./MessageEditor";
 import { AutomaticConnection } from "./AutomaticConnection";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
   return (
@@ -96,12 +97,14 @@ function useDialogFocus(open: boolean, onClose: () => void, busy: boolean) {
   }, [open]);
 }
 function CampaignForm({
+  workspaceId,
   sessions,
   templates,
   onCreate,
   onClose,
   testSession,
 }: {
+  workspaceId: string;
   sessions: Row[];
   templates: Row[];
   onCreate: (v: Row, file: File | null) => Promise<void>;
@@ -122,6 +125,7 @@ function CampaignForm({
     [sendingEndTime, setEnd] = useState("17:00"),
     [sendIntervalSeconds, setInterval] = useState("120"),
     [file, setFile] = useState<File | null>(null),
+    [media, setMedia] = useState<MediaDraft>(null),
     [phoneE164, setPhone] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -167,6 +171,7 @@ function CampaignForm({
           "connection-test.csv",
           { type: "text/csv" },
         );
+      const uploaded = media?.file ? await uploadMedia(workspaceId, media.file) : null;
       await onCreate(
         {
           name,
@@ -177,6 +182,7 @@ function CampaignForm({
           sendingEndTime: testSession ? "23:59" : sendingEndTime,
           sendIntervalSeconds: Number(sendIntervalSeconds),
           isTest: Boolean(testSession),
+          ...(uploaded ? { mediaType: media?.type, mediaUrl: uploaded.url, mediaMime: uploaded.mime, mediaFilename: uploaded.filename, mediaSizeBytes: uploaded.size } : {}),
         },
         upload,
       );
@@ -267,7 +273,7 @@ function CampaignForm({
               </p>
             </>
           )}
-          <MessageEditor value={template} onChange={setTemplate} />
+          <MessageEditor value={template} onChange={setTemplate} media={media} onMediaChange={setMedia} />
           <div className="v2-form-grid">
             <Field
               name="Timezone"
@@ -558,6 +564,7 @@ export default function SaaSApp() {
     [detail, setDetail] = useState<Row | null>(null),
     [conversationId, setConversation] = useState(""),
     [conversation, setThread] = useState<Row | null>(null),
+    [replyMedia, setReplyMedia] = useState<MediaDraft>(null),
     [search, setSearch] = useState(""),
     [notice, setNotice] = useState("");
   const [editingTemplate, setEditingTemplate] = useState<Row | null>(null);
@@ -1554,6 +1561,10 @@ export default function SaaSApp() {
                           key={m.messageId}
                         >
                           <p>{m.body}</p>
+                          {m.mediaUrl && m.mediaType === "image" && <img className="v2-media-preview" src={m.mediaUrl} alt={m.mediaFilename || "Image attachment"} />}
+                          {m.mediaUrl && m.mediaType === "video" && <video className="v2-media-preview" src={m.mediaUrl} controls />}
+                          {m.mediaUrl && m.mediaType === "audio" && <audio src={m.mediaUrl} controls />}
+                          {m.mediaUrl && m.mediaType === "document" && <a href={m.mediaUrl} target="_blank" rel="noreferrer">📎 {m.mediaFilename || "Open document"}</a>}
                           <small>
                             {date(m.createdAt)} · {m.status}
                           </small>
@@ -1571,11 +1582,14 @@ export default function SaaSApp() {
                             new FormData(form).get("text") || "",
                           );
                           void perform(async () => {
+                            const uploaded = replyMedia?.file ? await uploadMedia(workspaceId, replyMedia.file) : null;
                             await action("reply", workspaceId, {
                               conversationId,
                               text,
+                              ...(uploaded ? { mediaType: replyMedia?.type, mediaUrl: uploaded.url, mediaMime: uploaded.mime, mediaFilename: uploaded.filename, mediaSizeBytes: uploaded.size } : {}),
                             });
                             form.reset();
+                            setReplyMedia(null);
                             setThread(
                               await action("conversation", workspaceId, {
                                 conversationId,
@@ -1585,13 +1599,7 @@ export default function SaaSApp() {
                           });
                         }}
                       >
-                        <input
-                          name="text"
-                          aria-label="Reply message"
-                          placeholder="Write a reply…"
-                          required
-                          maxLength={4096}
-                        />
+                        <MessageEditor media={replyMedia} onMediaChange={setReplyMedia} name="text" />
                         <button className="v2-primary" disabled={busy}>
                           Send reply
                         </button>
@@ -1861,6 +1869,7 @@ export default function SaaSApp() {
       {wizard && (
         <CampaignForm
           key={workspaceId + (testSession?.whatsappSessionId || "new")}
+          workspaceId={workspaceId}
           sessions={sessions}
           templates={templates}
           onCreate={create}

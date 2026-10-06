@@ -22,4 +22,6 @@ The isolated branch passes the production build, v2 frontend checks, v2 runtime 
 ## Promotion gate
 
 Before any production promotion, create a staging test account, confirm the 3-day clock and expired-trial sending block, test every listed timezone (including `Asia/Riyadh`), run an authorized test message, verify signed callbacks, and review tenant isolation. Only after those checks pass should the changes be cherry-picked or merged into the production branch.
+## Media staging boundary
 
+Media support is included in this branch only. Apply `backend/supabase/v2-review/006-media-messages.sql` to the isolated database, then review/apply `007-staging-media-storage.sql` there to create the temporary staging bucket used by WASender's HTTPS media fetch. The bucket is intentionally public for staging compatibility; replace it with a signed-URL broker before any production rollout. Never apply these migrations to the client's production project during testing.

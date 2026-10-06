@@ -986,3 +986,4 @@ td {
 .v2-message-preview { margin: 16px 0; padding: 16px; background: #faf9f8; border: 1px solid #e5e4e8; border-radius: 12px; }
 .v2-message-editor .v2-actions { flex-wrap: wrap; gap: 8px; }
 .v2-message-editor .v2-actions button { font-size: 12px; }
+.v2-media-preview{display:block;max-width:260px;max-height:220px;border-radius:10px;margin:.5rem 0;object-fit:cover}.v2-bubble audio{max-width:240px}.v2-error{color:#b42318;font-size:.85rem}

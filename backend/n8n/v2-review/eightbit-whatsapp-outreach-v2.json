@@ -1472,12 +1472,54 @@
       }
     },
     {
+      "id": "2d3d1198-d8d4-4e94-99e9-9a84cc0db42a",
+      "name": "V2 Record Connection Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        3900
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://lreolnewuapcurpskqwr.supabase.co/rest/v1/rpc/eb_outreach_record_connection_check_v2",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({user_id:$json.diagnostic.userId,whatsapp_session_id:$json.diagnostic.whatsappSessionId,phase:$json.diagnostic.phase,http_status:$json.diagnostic.httpStatus,reason:$json.diagnostic.reason,request_id:$json.result.requestId}) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "supabaseApi": {
+          "id": "xscPJkx7lM0aZoWi",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
       "id": "7855ea56-97ef-4749-985e-9a515e1ba016",
       "name": "V2 Verify WASender Phone",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        560,
+        840,
         3900
       ],
       "parameters": {
@@ -1517,7 +1559,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        840,
+        1120,
         3900
       ],
       "parameters": {
@@ -1531,7 +1573,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1120,
+        1400,
         3900
       ],
       "parameters": {
@@ -1562,8 +1604,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        1400,
-        3900
+        1680,
+        4150
       ],
       "parameters": {
         "httpMethod": "POST",
@@ -1581,7 +1623,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1680,
+        0,
         4150
       ],
       "parameters": {
@@ -1595,7 +1637,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        0,
+        280,
         4150
       ],
       "parameters": {
@@ -1626,7 +1668,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        280,
+        560,
         4150
       ],
       "parameters": {
@@ -1670,7 +1712,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        560,
+        840,
         4150
       ],
       "parameters": {
@@ -1684,7 +1726,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        840,
+        1120,
         4150
       ],
       "parameters": {
@@ -1715,7 +1757,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
+        1400,
         4150
       ],
       "parameters": {
@@ -1728,8 +1770,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1400,
-        4150
+        1680,
+        4400
       ],
       "parameters": {
         "conditions": {
@@ -1759,7 +1801,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1680,
+        0,
         4400
       ],
       "parameters": {
@@ -1801,7 +1843,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
+        280,
         4400
       ],
       "parameters": {
@@ -1814,7 +1856,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        280,
+        560,
         4400
       ],
       "parameters": {
@@ -1845,7 +1887,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        560,
+        840,
         4400
       ],
       "parameters": {
@@ -1876,7 +1918,7 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
       "position": [
-        840,
+        1120,
         4400
       ],
       "parameters": {
@@ -1900,7 +1942,7 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
       "position": [
-        1120,
+        1400,
         4400
       ],
       "parameters": {
@@ -1920,8 +1962,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1400,
-        4400
+        1680,
+        4650
       ],
       "parameters": {
         "jsCode": "// Shared source embedded into import and API Code nodes. No external modules.\nconst fields = ['name','first_name','company','phone','email','city','industry'];\nfunction phone(value, options = {}) {\n  if (typeof value !== 'string') throw new Error('Phone must be text; format Excel phone cells as Text');\n  let p = value.trim();\n  if (!/^[+\\d\\s().-]+$/.test(p)) throw new Error('Phone contains unsupported characters');\n  p = p.replace(/[\\s().-]/g,'');\n  if (p.startsWith('00')) p = '+' + p.slice(2);\n  if (!p.startsWith('+')) {\n    if (options.phoneFormat === 'international') p = '+' + p;\n    else if (/^[1-9]\\d{0,2}$/.test(options.defaultCallingCode || '')) {\n      const trunk = options.trunkPrefix || '';\n      if (trunk && !/^\\d{1,3}$/.test(trunk)) throw new Error('Invalid trunkPrefix');\n      if (trunk && p.startsWith(trunk)) p = p.slice(trunk.length);\n      p = '+' + options.defaultCallingCode + p;\n    } else throw new Error('Use +country-code or specify defaultCallingCode');\n  }\n  if (!/^\\+[1-9]\\d{7,14}$/.test(p)) throw new Error('Invalid international phone length');\n  return p;\n}\nfunction clean(value, max = 200) {\n  const s = String(value ?? '').normalize('NFKC').replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g,'').trim();\n  if (s.length > max) throw new Error('Field exceeds ' + max + ' characters');\n  if (s.includes('{{') || s.includes('}}')) throw new Error('Contact data cannot contain template delimiters');\n  return s;\n}\nfunction normalizeContacts(rows, options = {}) {\n  if (!Array.isArray(rows) || !rows.length || rows.length > 5000) throw new Error('Import 1-5000 rows per request');\n  const seen = new Set(), contacts = [], rejected = []; let duplicates = 0;\n  rows.forEach((raw, i) => {\n    try {\n      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid contact');\n      const row = Object.fromEntries(Object.entries(raw).map(([k,v])=>[k.replace(/^\\uFEFF/,'').trim().toLowerCase().replace(/\\s+/g,'_'),v]));\n      const c = {};\n      for (const k of fields) c[k] = k === 'phone' ? phone(row[k], options) : clean(row[k], k === 'email' ? 254 : 200);\n      c.first_name ||= c.name.split(/\\s+/)[0] || '';\n      if (c.email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c.email)) throw new Error('Invalid email');\n      if (seen.has(c.phone)) { duplicates++; return; }\n      seen.add(c.phone); contacts.push(c);\n    } catch (e) { rejected.push({row:i+2,error:e.message}); }\n  });\n  return {contacts,validation:{received:rows.length,valid:contacts.length,duplicates,rejectedCount:rejected.length,rejected:rejected.slice(0,100),errorsTruncated:rejected.length>100}};\n}\nfunction normalizeTemplate(value) {\n  if (typeof value !== 'string' || !value.trim() || value.length>4096) throw new Error('Template must contain 1-4096 characters');\n  const t = value.replace(/\\{\\{\\s*([a-z_]+)\\s*\\}\\}/g, (_,k) => {\n    if (!fields.includes(k)) throw new Error('Unsupported template variable: '+k);\n    return '{{'+k+'}}';\n  });\n  if (/\\{\\{|\\}\\}/.test(t.replace(/\\{\\{[a-z_]+\\}\\}/g,''))) throw new Error('Malformed template');\n  return t;\n}\n\nfunction fail(code,message,rid='req_error'){return [{json:{valid:false,result:{success:false,data:null,error:{code,message},requestId:rid}}}];}const req=$('V2 Validate File').first().json;try{const rows=$input.all().map(i=>i.json);if(rows.some(x=>x.error))throw Error('Unable to read this file.');const v=normalizeContacts(rows,req.query);if(!v.contacts.length)throw Error('No valid contacts found.');return [{json:{valid:true,userId:req.userId,payload:{action:'import',workspaceId:req.query.workspaceId,campaignId:req.query.campaignId,requestId:req.query.requestId,contacts:v.contacts.map(c=>({name:c.name,firstName:c.first_name,company:c.company,phoneE164:c.phone,email:c.email,city:c.city,industry:c.industry})),validation:v.validation}}}];}catch(e){return fail('INVALID_REQUEST',e.message,req.query.requestId);}"
@@ -1934,7 +1976,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1680,
+        0,
         4650
       ],
       "parameters": {
@@ -1965,7 +2007,7 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
+        280,
         4650
       ],
       "parameters": {
@@ -1982,7 +2024,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        280,
+        560,
         4650
       ],
       "parameters": {
@@ -2024,7 +2066,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        560,
+        840,
         4650
       ],
       "parameters": {
@@ -2037,7 +2079,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        840,
+        1120,
         4650
       ],
       "parameters": {
@@ -2068,7 +2110,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
+        1400,
         4650
       ],
       "parameters": {
@@ -2081,8 +2123,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1400,
-        4650
+        1680,
+        4900
       ],
       "parameters": {
         "conditions": {
@@ -2112,7 +2154,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1680,
+        0,
         4900
       ],
       "parameters": {
@@ -2154,7 +2196,7 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.4,
       "position": [
-        0,
+        280,
         4900
       ],
       "parameters": {
@@ -2176,7 +2218,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        280,
+        560,
         4900
       ],
       "parameters": {
@@ -2218,7 +2260,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        560,
+        840,
         4900
       ],
       "parameters": {
@@ -2260,7 +2302,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        840,
+        1120,
         4900
       ],
       "parameters": {
@@ -2273,7 +2315,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1120,
+        1400,
         4900
       ],
       "parameters": {
@@ -2315,8 +2357,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1400,
-        4900
+        1680,
+        5150
       ],
       "parameters": {
         "jsCode": "return $input.all().filter(i=>i.json.statusCode===200&&i.json.body?.apiSecret&&i.json.body?.messageId).map(i=>({json:i.json.body}));"
@@ -2328,7 +2370,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1680,
+        0,
         5150
       ],
       "parameters": {
@@ -2345,7 +2387,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ ({to:$json.phoneE164,text:$json.personalizedMessage}) }}",
+        "jsonBody": "={{ (() => { const b={to:$json.phoneE164}; if($json.personalizedMessage) b.text=$json.personalizedMessage; if($json.mediaType==='image') b.imageUrl=$json.mediaUrl; if($json.mediaType==='video') b.videoUrl=$json.mediaUrl; if($json.mediaType==='audio') b.audioUrl=$json.mediaUrl; if($json.mediaType==='document'){ b.documentUrl=$json.mediaUrl; if($json.mediaFilename) b.fileName=$json.mediaFilename; } return b; })() }}",
         "options": {
           "redirect": {
             "redirect": {
@@ -2371,7 +2413,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
+        280,
         5150
       ],
       "parameters": {
@@ -2385,7 +2427,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        280,
+        560,
         5150
       ],
       "parameters": {
@@ -2420,49 +2462,6 @@
           "name": "Supabase account 2"
         }
       }
-    },
-    {
-      "id": "2d3d1198-d8d4-4e94-99e9-9a84cc0db42a",
-      "name": "V2 Record Connection Check",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        4800,
-        5050
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://lreolnewuapcurpskqwr.supabase.co/rest/v1/rpc/eb_outreach_record_connection_check_v2",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "supabaseApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ ({user_id:$json.diagnostic.userId,whatsapp_session_id:$json.diagnostic.whatsappSessionId,phase:$json.diagnostic.phase,http_status:$json.diagnostic.httpStatus,reason:$json.diagnostic.reason,request_id:$json.result.requestId}) }}",
-        "options": {
-          "redirect": {
-            "redirect": {
-              "followRedirects": false
-            }
-          },
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "neverError": true,
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 20000
-        }
-      },
-      "retryOnFail": false,
-      "onError": "continueRegularOutput",
-      "credentials": {
-        "supabaseApi": {
-          "id": "xscPJkx7lM0aZoWi",
-          "name": "Supabase account 2"
-        }
-      },
-      "notes": "Private latest failed verification phase/status/reason only; no keys, phone or provider body."
     }
   ],
   "connections": {
@@ -3034,6 +3033,17 @@
         ]
       ]
     },
+    "V2 Record Connection Check": {
+      "main": [
+        [
+          {
+            "node": "V2 Safe RPC Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "V2 Status Verified": {
       "main": [
         [
@@ -3483,17 +3493,6 @@
         [
           {
             "node": "V2 Commit Customer Send Outcome",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "V2 Record Connection Check": {
-      "main": [
-        [
-          {
-            "node": "V2 Safe RPC Response",
             "type": "main",
             "index": 0
           }
