@@ -1209,3 +1209,11 @@ td {
 @media(prefers-reduced-motion:reduce){.v2-campaign-list tbody tr{animation:none;transition:none;}}
 
 @media(max-width:760px){.v2-inbox-workspace:not(.has-conversation)>.v2-inbox-chat{display:none;}}
+
+.v2-shell .v2-add-workspace {width:100%;justify-content:flex-start;border:0;background:transparent;color:#b83c20;font-size:12px;margin-top:7px;padding:8px 10px;}
+.v2-shell .v2-add-workspace:hover:not(:disabled) {background:#fff1e9;color:#a52e15;}
+.v2-workspace-dialog {max-width:460px;}
+.v2-workspace-symbol {display:inline-grid;place-items:center;width:40px;height:40px;background:#fff1e9;color:#c44927;border-radius:12px;margin-bottom:12px;}
+.v2-workspace-dialog .v2-connection-header {margin-bottom:12px;}
+.v2-workspace-note {color:#64748b;font-size:12px;background:#f5f8fc;border:1px solid #e8eef5;border-radius:10px;padding:12px;}
+.v2-workspace-dialog-actions {justify-content:flex-end;margin-top:22px;}

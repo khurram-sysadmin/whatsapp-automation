@@ -37,6 +37,8 @@ import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
 import { MessageEditor, mediaDraftFromRow, type MediaDraft } from "./MessageEditor";
 import { MediaPreview } from "./MediaPreview";
 import { CampaignProgress } from "./CampaignProgress";
+import { useDialogFocus } from "./dialogFocus";
+import { AddWorkspaceDialog } from "./AddWorkspaceDialog";
 import { InboxLayout, ContactAvatar, contactName } from "./InboxLayout";
 import { AutomaticConnection } from "./AutomaticConnection";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
@@ -49,55 +51,7 @@ export function OnboardingWelcome({ checking = false }: { checking?: boolean }) 
     </div>
   );
 }
-function useDialogFocus(open: boolean, onClose: () => void, busy: boolean) {
-  const state = useRef({ onClose, busy });
-  useEffect(() => {
-    state.current = { onClose, busy };
-  }, [onClose, busy]);
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const dialog = document.querySelector<HTMLElement>(
-      '.v2-overlay [role="dialog"]',
-    );
-    if (!dialog) return;
-    const oldOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const controls = () =>
-      Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'button,input,select,textarea,a[href],[tabindex="0"]',
-        ),
-      ).filter(
-        (el) => !el.hasAttribute("disabled") && el.offsetParent !== null,
-      );
-    controls()[0]?.focus();
-    const keyboard = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !state.current.busy) {
-        event.preventDefault();
-        state.current.onClose();
-      }
-      if (event.key === "Tab") {
-        const items = controls();
-        const first = items[0],
-          last = items.at(-1);
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first?.focus();
-        }
-      }
-    };
-    dialog.addEventListener("keydown", keyboard);
-    return () => {
-      document.body.style.overflow = oldOverflow;
-      dialog.removeEventListener("keydown", keyboard);
-      if (previous?.isConnected) previous.focus();
-    };
-  }, [open]);
-}
+
 function CampaignForm({
   workspaceId,
   sessions,
@@ -565,6 +519,8 @@ export default function SaaSApp() {
     [replyMedia, setReplyMedia] = useState<MediaDraft>(null),
     [search, setSearch] = useState(""),
     [notice, setNotice] = useState("");
+  const [addingWorkspace, setAddingWorkspace] = useState(false);
+  useEffect(()=>{if(!authenticated)setAddingWorkspace(false);},[authenticated]);
   const [editingTemplate, setEditingTemplate] = useState<Row | null>(null);
   const [templateMedia, setTemplateMedia] = useState<MediaDraft>(null);
   useEffect(() => { setTemplateMedia(mediaDraftFromRow(editingTemplate)); }, [editingTemplate]);
@@ -991,6 +947,7 @@ export default function SaaSApp() {
               ))}
             </select>
           </label>
+          <button className="v2-add-workspace" type="button" disabled={busy} onClick={()=>setAddingWorkspace(true)}><Plus size={14}/> Add workspace</button>
         </div>
         <nav aria-label="Main navigation">
           {navigation.map((n) => {
@@ -1798,6 +1755,7 @@ export default function SaaSApp() {
           )}
         </main>
       </div>
+      {addingWorkspace && <AddWorkspaceDialog initialTimezone={workspace?.timezone || config.timezone} onClose={()=>setAddingWorkspace(false)} onCreated={async id=>{await loadBootstrap(id);navigate("WhatsApp Accounts");setAddingWorkspace(false);}}/>}
       {wizard && (
         <CampaignForm
           key={workspaceId + (testSession?.whatsappSessionId || "new")}
