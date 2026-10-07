@@ -1,3 +1,5 @@
+> Deployment correction: use the Complete cPanel ZIP or the connection repair ZIP. Live connection and webhook endpoints returned 404 after the frontend release. See connection-endpoint-repair-2026-10-07.md. Live restoration is pending upload.
+
 # Attachments and international time zones — 7 October 2026
 
 This checkpoint supersedes the earlier staging-only media instructions. The separate billing/trial rollout remains staged. Existing production subscriptions and customer data have not been migrated to a new plan.
