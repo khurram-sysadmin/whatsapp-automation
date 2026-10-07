@@ -18,6 +18,7 @@ for(const f of ['004-isolated-storage.sql','006-media-messages.sql','supabase-v2
 await db.exec(read('tests/fixtures/legacy-media-functions.sql'));
 const migration=read('backend/supabase/v2-review/011-production-media-compatibility.sql');
 await db.exec(migration);await db.exec(migration);
+const templateMigration=read('backend/supabase/v2-review/013-template-media.sql');await db.exec(templateMigration);await db.exec(templateMigration);
 const owner='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222',viewer='33333333-3333-4333-8333-333333333333';
 await db.query("INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES($1,'owner@test.invalid','{}'),($2,'other@test.invalid','{}'),($3,'viewer@test.invalid','{}')",[owner,other,viewer]);
 let seq=0;const api=async(uid,p)=>(await db.query('SELECT public.eb_outreach_api_v2($1,$2::jsonb) r',[uid,JSON.stringify({requestId:'media-test-'+(++seq),...p})])).rows[0].r;
@@ -30,7 +31,15 @@ for(const [type,mime,ext] of [['image','image/png','png'],['video','video/mp4','
  const path=`${wid}/fixture-${type}.${ext}`;
  await db.query("INSERT INTO storage.objects VALUES('outreach-media',$1,$2::jsonb)",[path,JSON.stringify({mimetype:mime,size:1234})]);
  const media={mediaType:type,mediaUrl:`https://lreolnewuapcurpskqwr.supabase.co/storage/v1/object/authenticated/outreach-media/${path}`,mediaMime:mime,mediaFilename:`fixture.${ext}`,mediaSizeBytes:1234};
- const p={...base,...media,requestId:`media-create-${type}`},created=await api(owner,p);
+ const template=await api(owner,{action:'saveTemplate',workspaceId:wid,name:'Saved '+type,body:'',...media});assert.equal(template.success,true,JSON.stringify(template));assert.equal(template.data.mediaUrl,media.mediaUrl);
+ assert.ok((await api(owner,{action:'templates',workspaceId:wid})).data.some(t=>t.templateId===template.data.templateId&&t.mediaType===type));
+ assert.equal((await api(viewer,{action:'saveTemplate',workspaceId:wid,name:'Unauthorized',body:'',...media})).success,false);
+ const foreignWid=(await api(other,{action:'workspaceCreate',companyName:'Other '+type,timezone:'Asia/Riyadh'})).data.workspaceId;
+ assert.equal((await api(other,{action:'saveTemplate',workspaceId:foreignWid,name:'Foreign',body:'',...media})).success,false);
+ assert.equal((await api(other,{action:'templates',workspaceId:foreignWid})).data.length,0);
+ assert.equal((await api(owner,{action:'saveTemplate',workspaceId:wid,name:'Saved '+type,body:'Text only'})).data.mediaUrl,null);
+ const savedMedia=Object.fromEntries(['mediaType','mediaUrl','mediaMime','mediaFilename','mediaSizeBytes'].map(key=>[key,template.data[key]]));
+ const p={...base,...savedMedia,requestId:`media-create-${type}`},created=await api(owner,p);
  assert.equal(created.success,true,JSON.stringify(created));assert.equal(created.data.mediaType,type);
  assert.deepEqual(await api(owner,p),created);assert.equal((await api(owner,{...p,mediaFilename:'changed.pdf'})).error.code,'REQUEST_CONFLICT');
  assert.equal((await api(other,{...base,...media})).error.code,'FORBIDDEN');assert.equal((await api(viewer,{...base,...media})).error.code,'FORBIDDEN');
@@ -52,5 +61,5 @@ for(const [type,mime,ext] of [['image','image/png','png'],['video','video/mp4','
 }
 assert.equal((await api(owner,{...base,template:'Normal text'})).success,true);
 assert.equal((await api(owner,{...base,template:'Normal text',timezone:'Invalid/Zone'})).success,false);
-assert.equal((await db.query("SELECT count(*)::int n FROM outreach_v2.release_function_backups")).rows[0].n,3);
-await db.close();console.log('PASS: legacy media migration, repeat application, all four media kinds, media-only campaigns/replies, queue and inbox contract, tenant/role isolation, metadata checks, idempotency, Riyadh and text compatibility. No live requests or messages.');
+assert.equal((await db.query("SELECT count(*)::int n FROM outreach_v2.release_function_backups")).rows[0].n,4);
+await db.close();console.log('PASS: legacy media migration, repeat application, all four media kinds, saved templates and campaign reuse, media-only campaigns/replies, queue and inbox contract, tenant/role isolation, metadata checks, idempotency, Riyadh and text compatibility. No live requests or messages.');

@@ -710,3 +710,8 @@ Now give Codex this exact prompt.
 Your current workflow's scheduled branch is one 15-second scheduler with Supabase handling timing/retries. Pasted text The v2 implementation should preserve that safety philosophy but make pacing/session locks tenant-aware.
 
 ---
+
+
+### Compatible saved-template attachment extension - 7 October 2026
+
+`saveTemplate` keeps `name` and `body` and accepts optional `mediaType`, `mediaUrl`, `mediaMime`, `mediaFilename`, `mediaSizeBytes`. `templates` and save responses return those same fields with `templateId`, `name`, `body`. Body may be empty only with a validated private workspace attachment. A text-only save clears prior media metadata. Campaign creation reuses these media fields and uses the saved body as `template`. Migration 013 installs this extension after the media validation/compatibility migrations.

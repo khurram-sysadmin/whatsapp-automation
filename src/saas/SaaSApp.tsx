@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import "./saas.css";
 import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
-import { MessageEditor, type MediaDraft } from "./MessageEditor";
+import { MessageEditor, mediaDraftFromRow, type MediaDraft } from "./MessageEditor";
 import { MediaPreview } from "./MediaPreview";
 import { CampaignProgress } from "./CampaignProgress";
 import { AutomaticConnection } from "./AutomaticConnection";
@@ -173,7 +173,7 @@ function CampaignForm({
           "connection-test.csv",
           { type: "text/csv" },
         );
-      const uploaded = media?.file ? await uploadMedia(workspaceId, media.file) : null;
+      const uploaded = media?.file ? await uploadMedia(workspaceId, media.file) : media;
       await onCreate(
         {
           name,
@@ -248,7 +248,8 @@ function CampaignForm({
                     const t = templates.find(
                       (t) => t.templateId === e.target.value,
                     );
-                    if (t) setTemplate(t.body);
+                    setTemplate(t?.body || "");
+                    setMedia(mediaDraftFromRow(t));
                   }}
                   defaultValue=""
                 >
@@ -275,7 +276,7 @@ function CampaignForm({
               </p>
             </>
           )}
-          <MessageEditor value={template} onChange={setTemplate} media={media} onMediaChange={setMedia} />
+          <MessageEditor disabled={busy} value={template} onChange={setTemplate} media={media} onMediaChange={setMedia} />
           <div className="v2-form-grid">
             <Field
               name="Timezone"
@@ -570,6 +571,8 @@ export default function SaaSApp() {
     [search, setSearch] = useState(""),
     [notice, setNotice] = useState("");
   const [editingTemplate, setEditingTemplate] = useState<Row | null>(null);
+  const [templateMedia, setTemplateMedia] = useState<MediaDraft>(null);
+  useEffect(() => { setTemplateMedia(mediaDraftFromRow(editingTemplate)); }, [editingTemplate]);
   const authIdentity = useRef("");
   const generation = useRef(0),
     refreshLock = useRef<Promise<void> | null>(null),
@@ -726,6 +729,8 @@ export default function SaaSApp() {
     setTestSession(null);
     setSearch("");
     setEditingTemplate(null);
+    setTemplateMedia(null);
+    setReplyMedia(null);
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
@@ -744,6 +749,8 @@ export default function SaaSApp() {
   }, [refresh]);
   const navigate = (next: Page) => {
     setEditingTemplate(null);
+    setTemplateMedia(null);
+    setNotice("");
     setPage(next);
     setCampaign("");
     setDetail(null);
@@ -1630,11 +1637,14 @@ export default function SaaSApp() {
                       const form = e.currentTarget;
                       const f = new FormData(form);
                       void perform(async () => {
+                        const uploaded = templateMedia?.file ? await uploadMedia(workspaceId, templateMedia.file) : templateMedia;
                         await action("saveTemplate", workspaceId, {
                           name: f.get("name"),
                           body: f.get("body"),
+                          ...(uploaded ? { mediaType: templateMedia?.type, mediaUrl: uploaded.url, mediaMime: uploaded.mime, mediaFilename: uploaded.filename, mediaSizeBytes: uploaded.size } : {}),
                         });
                         form.reset();
+                        setTemplateMedia(null);
                         setEditingTemplate(null);
                       });
                     }}
@@ -1649,7 +1659,7 @@ export default function SaaSApp() {
                         readOnly={Boolean(editingTemplate)}
                       />
                     </label>
-                    <MessageEditor name="body" defaultValue={editingTemplate?.body || ""} />
+                    <MessageEditor disabled={busy} name="body" defaultValue={editingTemplate?.body || ""} media={templateMedia} onMediaChange={setTemplateMedia} />
                     <button className="v2-primary" disabled={busy}>
                       Save template
                     </button>
@@ -1661,6 +1671,7 @@ export default function SaaSApp() {
                   <section key={t.templateId} className="v2-card">
                     <h3>{t.name}</h3>
                     <p className="v2-prewrap">{t.body}</p>
+                    {t.mediaUrl && <MediaPreview url={t.mediaUrl} type={t.mediaType} filename={t.mediaFilename} />}
                     {canWrite && (
                       <button
                         disabled={busy}

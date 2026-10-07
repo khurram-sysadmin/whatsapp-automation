@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent } from 'react';
 import { MoreHorizontal, Mic, Square, Image, Video, FileText, AudioLines, UserRound, Eye, X, Paperclip } from 'lucide-react';
 import { MAX_RECORDING_SECONDS, recordingToFile } from './voiceRecording';
+import { MediaPreview } from './MediaPreview';
 
 const fields = [['first_name','First name'],['company','Company'],['name','Full name'],['phone','Phone'],['email','Email'],['city','City'],['industry','Industry']];
 const examples = [
@@ -8,10 +9,14 @@ const examples = [
   {name:'Ali Khan',first_name:'Ali',company:'Sysnova Solutions',phone:'+12025550102',email:'ali@example.com',city:'Lahore',industry:'Technology'},
 ];
 export type MediaDraft = {type:'image'|'video'|'audio'|'document';url:string;mime:string;filename:string;size:number;file?:File}|null;
+export function mediaDraftFromRow(row?: Record<string, unknown> | null): MediaDraft {
+  if (!row || !['image','video','audio','document'].includes(String(row.mediaType)) || typeof row.mediaUrl !== 'string' || !row.mediaUrl) return null;
+  return {type:row.mediaType as NonNullable<MediaDraft>['type'],url:row.mediaUrl,mime:String(row.mediaMime || ''),filename:String(row.mediaFilename || 'Attachment'),size:Number(row.mediaSizeBytes) || 0};
+}
 const mediaRules = {
   image:{label:'Image',accept:'image/jpeg,image/png',max:5*1024*1024,icon:Image},
   video:{label:'Video',accept:'video/mp4,video/3gpp',max:50*1024*1024,icon:Video},
-  audio:{label:'Audio file',accept:'audio/aac,audio/mpeg,audio/ogg,audio/amr,.aac,.mp3,.ogg,.amr',max:16*1024*1024,icon:AudioLines},
+  audio:{label:'Audio',accept:'audio/aac,audio/mpeg,audio/ogg,audio/amr,.aac,.mp3,.ogg,.amr',max:16*1024*1024,icon:AudioLines},
   document:{label:'Document',accept:'.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt',max:100*1024*1024,icon:FileText},
 };
 type Kind = keyof typeof mediaRules;
@@ -60,6 +65,15 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
     onMediaChange?.({type,url:URL.createObjectURL(file),mime:file.type,filename:file.name,size:file.size,file});
   };
   const chooseFile=(next:Kind)=>{setKind(next);setMenu(false);setError('');requestAnimationFrame(()=>fileRef.current?.click());};
+  const pasteAttachment=(event: ClipboardEvent<HTMLTextAreaElement>)=>{
+    if(!onMediaChange || disabled || active.current || !event.clipboardData.files.length)return;
+    event.preventDefault();
+    if(event.clipboardData.files.length!==1){setError('Attach one file at a time.');return;}
+    let file=event.clipboardData.files[0];
+    const type:Kind=file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type.startsWith('audio/')?'audio':'document';
+    if(type==='image'&&!/\.(jpe?g|png)$/i.test(file.name)&&['image/png','image/jpeg'].includes(file.type))file=new File([file],`screenshot-${Date.now()}.${file.type==='image/png'?'png':'jpg'}`,{type:file.type});
+    pickMedia(file,type);
+  };
   const startRecording=async()=>{
     if(active.current||disabled)return;
     const recordingId=++generation.current;const controller=new AbortController();encoding.current=controller;active.current=true;cancelled.current=false;setError('');setMenu(false);setProcessing(true);setSeconds(0);
@@ -94,7 +108,7 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
   const locked=disabled||recording||processing;
   return <div ref={root} className={'v2-message-editor v2-composer'+(compact?' compact':'')}>
     <div className="v2-composer-box">
-      <textarea aria-label="Message" ref={ref} name={name} value={text} onChange={event=>change(event.target.value)} required={!media} maxLength={4096} rows={compact?2:4} placeholder={compact?'Write a message…':'Write your campaign message…'} disabled={locked}/>
+      <textarea aria-label="Message" ref={ref} name={name} value={text} onChange={event=>change(event.target.value)} onPaste={pasteAttachment} required={!media} maxLength={4096} rows={compact?2:4} placeholder={compact?'Write a message…':'Write a message…'} disabled={locked}/>
       <div className="v2-composer-toolbar">
         <div className="v2-composer-tools">
           <button type="button" className="v2-icon-button" aria-label="Message options" aria-expanded={menu} title="Attachments and personalization" disabled={locked} onClick={()=>setMenu(current=>!current)}><MoreHorizontal size={20}/></button>
@@ -112,7 +126,7 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
     </div>}
     {onMediaChange&&<input ref={fileRef} className="v2-hidden-file" type="file" accept={mediaRules[kind].accept} aria-label="Attach file" onChange={event=>{pickMedia(event.target.files?.[0]);event.target.value='';}}/>}
     {(recording||processing)&&<div className="v2-recording" role="status"><span className={recording?'v2-recording-dot':''}/><strong>{recording?`Recording ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`:'Preparing voice note…'}</strong>{recording&&<button type="button" onClick={()=>recorder.current?.stop()}><Square size={13}/> Stop</button>}<button type="button" aria-label="Discard recording" onClick={discard}><X size={16}/></button></div>}
-    {media&&<div className="v2-composer-attachment"><div className="v2-attachment-content">{media.type==='image'?<img src={media.url} alt={media.filename}/>:media.type==='video'?<video src={media.url} controls preload="metadata"/>:media.type==='audio'?<audio src={media.url} controls preload="metadata"/>:<FileText size={26}/>}<span><strong>{media.filename}</strong><small>{(media.size/1024/1024).toFixed(1)} MB</small></span></div><button type="button" className="v2-icon-button" disabled={locked} aria-label="Remove attachment" onClick={()=>onMediaChange?.(null)}><X size={16}/></button></div>}
+    {media&&<div className="v2-composer-attachment"><div className="v2-attachment-content">{!media.file?<MediaPreview url={media.url} type={media.type} filename={media.filename}/>:media.type==='image'?<img src={media.url} alt={media.filename}/>:media.type==='video'?<video src={media.url} controls preload="metadata"/>:media.type==='audio'?<audio src={media.url} controls preload="metadata"/>:<FileText size={26}/>}<span><strong>{media.filename}</strong><small>{(media.size/1024/1024).toFixed(1)} MB</small></span></div><button type="button" className="v2-icon-button" disabled={locked} aria-label="Remove attachment" onClick={()=>onMediaChange?.(null)}><X size={16}/></button></div>}
     {panel&&<section className="v2-composer-panel"><div className="v2-section-head"><strong>{panel==='fields'?'Personalize message':'Message preview'}</strong><button type="button" className="v2-icon-button" aria-label="Close message panel" onClick={()=>setPanel(null)}><X size={16}/></button></div>{panel==='fields'?<><p className="v2-muted">Insert a field from your contacts.</p><div className="v2-field-chips">{fields.map(([key,title])=><button type="button" key={key} onClick={()=>insert(key)}>{title}</button>)}</div><small className="v2-muted">Use matching spreadsheet columns. Missing values appear blank.</small></>:<><select aria-label="Preview contact" value={sample} onChange={event=>setSample(Number(event.target.value))}>{examples.map((contact,index)=><option key={contact.name} value={index}>{contact.first_name} · {contact.company}</option>)}</select><p className="v2-prewrap">{preview||(media?'Attachment only':'Write a message to preview it.')}</p><small className="v2-muted">Sample contact. Sending uses your imported leads.</small></>}</section>}
     {error&&<p className="v2-error" role="alert">{error}</p>}
   </div>;

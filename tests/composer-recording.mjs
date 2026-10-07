@@ -15,8 +15,9 @@ class Recorder{
 }
 const exports={},require=createRequire(import.meta.url);
 const compiled=ts.transpileModule(fs.readFileSync('src/saas/MessageEditor.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-new vm.Script(compiled).runInContext(vm.createContext({exports,require:id=>id==='./voiceRecording'?{MAX_RECORDING_SECONDS:300,recordingToFile:async()=>{conversions++;return new File(['fixture mp3'],'voice-note.mp3',{type:'audio/mpeg'});}}:require(id),navigator:{mediaDevices:{getUserMedia}},window:dom.window,document:dom.window.document,MediaRecorder:Recorder,DOMException:dom.window.DOMException,URL:{createObjectURL:()=>`blob:fixture-${conversions}`,revokeObjectURL:()=>{}},requestAnimationFrame:fn=>setTimeout(fn,0),Blob,File,AbortController,setTimeout,clearTimeout,setInterval,clearInterval,console}));
-const {MessageEditor}=exports;
+new vm.Script(compiled).runInContext(vm.createContext({exports,require:id=>id==='./MediaPreview'?{MediaPreview:()=>null}:id==='./voiceRecording'?{MAX_RECORDING_SECONDS:300,recordingToFile:async()=>{conversions++;return new File(['fixture mp3'],'voice-note.mp3',{type:'audio/mpeg'});}}:require(id),navigator:{mediaDevices:{getUserMedia}},window:dom.window,document:dom.window.document,MediaRecorder:Recorder,DOMException:dom.window.DOMException,URL:{createObjectURL:()=>`blob:fixture-${conversions}`,revokeObjectURL:()=>{}},requestAnimationFrame:fn=>setTimeout(fn,0),Blob,File,AbortController,setTimeout,clearTimeout,setInterval,clearInterval,console}));
+const {MessageEditor,mediaDraftFromRow}=exports;
+assert.equal(mediaDraftFromRow({mediaType:'image',mediaUrl:'https://fixture.invalid/private.png',mediaMime:'image/png',mediaFilename:'saved.png',mediaSizeBytes:12}).filename,'saved.png');assert.equal(mediaDraftFromRow({mediaType:null}),null);
 let current=null;
 function Harness(){const [media,setMedia]=React.useState(null);current=media;return React.createElement('form',{onSubmit:event=>{event.preventDefault();submission++;}},React.createElement(MessageEditor,{name:'text',compact:true,media,onMediaChange:setMedia}),React.createElement('button',{type:'submit'},'Send'));}
 const root=createRoot(document.getElementById('root'));
@@ -25,6 +26,7 @@ const button=label=>[...document.querySelectorAll('button')].find(button=>button
 const click=async label=>{assert.ok(button(label),label);await act(async()=>{button(label).dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,5));});};
 assert.equal(document.querySelector('.v2-composer-panel'),null);assert.equal(document.querySelector('.v2-composer-menu'),null);
 await click('Message options');await click('Personalize message');await click('Company');assert.equal(document.querySelector('textarea').value,'{{company}}');await click('Close message panel');
+const paste=new dom.window.Event('paste',{bubbles:true,cancelable:true});Object.defineProperty(paste,'clipboardData',{value:{files:[new File(['screenshot'],'clipboard',{type:'image/png'})]}});await act(async()=>document.querySelector('textarea').dispatchEvent(paste));assert.equal(current.type,'image');assert.match(current.filename,/screenshot-.*\.png$/);await click('Remove attachment');
 await click('Record audio');assert.ok(document.querySelector('.v2-recording').textContent.includes('Recording'));
 await act(async()=>document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));
 assert.equal(submission,0);assert.match(document.querySelector('[role=alert]').textContent,/Finish or discard/);
