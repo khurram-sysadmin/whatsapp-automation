@@ -1,0 +1,56 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {PGlite} from '@electric-sql/pglite';
+const db=new PGlite(),read=p=>fs.readFileSync(p,'utf8');
+await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;
+CREATE SCHEMA auth;CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,raw_user_meta_data jsonb,created_at timestamptz DEFAULT now());
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+CREATE SCHEMA vault;CREATE TABLE vault.secrets(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),secret text,name text);
+CREATE VIEW vault.decrypted_secrets AS SELECT id,secret AS decrypted_secret FROM vault.secrets;
+CREATE FUNCTION vault.create_secret(s text,n text) RETURNS uuid LANGUAGE plpgsql AS $$DECLARE i uuid;BEGIN INSERT INTO vault.secrets(secret,name) VALUES(s,n) RETURNING id INTO i;RETURN i;END$$;
+CREATE SCHEMA storage;CREATE TABLE storage.objects(bucket_id text,name text,metadata jsonb);`);
+for(const f of ['001-base.sql','002-production-hardening.sql','003-campaign-lifecycle.sql'])await db.exec(read('backend/supabase/'+f));
+await db.exec(read('backend/supabase/v2-foundation/001-identity.sql').replace('CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault;',''));
+for(const f of ['002-private-saas-tables.sql','004-subscriptions-and-trials.sql'])await db.exec(read('backend/supabase/v2-foundation/'+f));
+for(const f of ['004-isolated-storage.sql','006-media-messages.sql','supabase-v2-runtime.sql'])await db.exec(read('backend/supabase/v2-review/'+f));
+// Older contract fixture has no attachment writes. The migration must patch it,
+// rather than passing only against an already-upgraded API.
+await db.exec(read('tests/fixtures/legacy-media-functions.sql'));
+const migration=read('backend/supabase/v2-review/011-production-media-compatibility.sql');
+await db.exec(migration);await db.exec(migration);
+const owner='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222',viewer='33333333-3333-4333-8333-333333333333';
+await db.query("INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES($1,'owner@test.invalid','{}'),($2,'other@test.invalid','{}'),($3,'viewer@test.invalid','{}')",[owner,other,viewer]);
+let seq=0;const api=async(uid,p)=>(await db.query('SELECT public.eb_outreach_api_v2($1,$2::jsonb) r',[uid,JSON.stringify({requestId:'media-test-'+(++seq),...p})])).rows[0].r;
+const wid=(await api(owner,{action:'workspaceCreate',companyName:'Fixture',timezone:'Asia/Riyadh'})).data.workspaceId;
+await db.query("INSERT INTO public.workspace_members(workspace_id,user_id,role) VALUES($1,$2,'viewer')",[wid,viewer]);
+const sid=(await api(owner,{action:'sessionCreate',workspaceId:wid,displayName:'Fixture'})).data.whatsappSessionId;
+await db.query("UPDATE outreach.whatsapp_sessions SET status='connected',api_key_secret_id=vault.create_secret('fixture-secret-not-real','fixture') WHERE id=$1",[sid]);
+const base={action:'create',workspaceId:wid,whatsappSessionId:sid,name:'Media fixture',template:'',timezone:'Asia/Riyadh',sendingStartTime:'00:00',sendingEndTime:'00:00',sendIntervalSeconds:15};
+for(const [type,mime,ext] of [['image','image/png','png'],['video','video/mp4','mp4'],['audio','audio/ogg','ogg'],['document','application/pdf','pdf']]){
+ const path=`${wid}/fixture-${type}.${ext}`;
+ await db.query("INSERT INTO storage.objects VALUES('outreach-media',$1,$2::jsonb)",[path,JSON.stringify({mimetype:mime,size:1234})]);
+ const media={mediaType:type,mediaUrl:`https://lreolnewuapcurpskqwr.supabase.co/storage/v1/object/authenticated/outreach-media/${path}`,mediaMime:mime,mediaFilename:`fixture.${ext}`,mediaSizeBytes:1234};
+ const p={...base,...media,requestId:`media-create-${type}`},created=await api(owner,p);
+ assert.equal(created.success,true,JSON.stringify(created));assert.equal(created.data.mediaType,type);
+ assert.deepEqual(await api(owner,p),created);assert.equal((await api(owner,{...p,mediaFilename:'changed.pdf'})).error.code,'REQUEST_CONFLICT');
+ assert.equal((await api(other,{...base,...media})).error.code,'FORBIDDEN');assert.equal((await api(viewer,{...base,...media})).error.code,'FORBIDDEN');
+ assert.equal((await api(owner,{...base,...media,mediaUrl:media.mediaUrl.replace(wid,other)})).success,false);
+ assert.equal((await api(owner,{...base,...media,mediaSizeBytes:99})).success,false);
+ assert.equal((await api(owner,{...base,...media,mediaUrl:'https://untrusted.invalid/file.png'})).success,false);
+ const cid=created.data.campaignId;
+ assert.equal((await api(owner,{action:'import',workspaceId:wid,campaignId:cid,contacts:[{phoneE164:`+1202555010${seq%10}`,name:'Fixture'}]})).success,true);
+ assert.equal((await api(owner,{action:'start',workspaceId:wid,campaignId:cid})).success,true);
+ const m=(await db.query('SELECT * FROM outreach_v2.messages WHERE campaign_id=$1',[cid])).rows[0];
+ assert.equal(m.media_type,type);assert.equal(m.media_url,media.mediaUrl);assert.equal(m.personalized_message,'');
+ const token=crypto.randomUUID();await db.query("UPDATE outreach_v2.messages SET status='dispatching',lease_token=$2,attempts=1 WHERE id=$1",[m.id,token]);
+ const done=(await db.query('SELECT public.eb_outreach_finish_send_v2($1::jsonb) r',[JSON.stringify({messageId:m.id,leaseToken:token,outcome:'accepted',providerMessageId:'fixture-'+m.id,safeResponse:{httpStatus:200}})])).rows[0].r;
+ assert.equal(done.saved,true);
+ const cm=(await db.query('SELECT * FROM outreach.conversation_messages WHERE provider_message_id=$1',['fixture-'+m.id])).rows[0];assert.equal(cm.media_type,type);
+ const reply=await api(owner,{action:'reply',workspaceId:wid,conversationId:cm.conversation_id,text:'',...media});assert.equal(reply.success,true,JSON.stringify(reply));
+ const queued=(await db.query('SELECT * FROM outreach_v2.messages WHERE conversation_message_id=$1',[reply.data.messageId])).rows[0];assert.equal(queued.media_type,type);assert.equal(queued.personalized_message,'');
+ const thread=await api(owner,{action:'conversation',workspaceId:wid,conversationId:cm.conversation_id});assert.ok(thread.data.messages.some(x=>x.mediaType===type));
+}
+assert.equal((await api(owner,{...base,template:'Normal text'})).success,true);
+assert.equal((await api(owner,{...base,template:'Normal text',timezone:'Invalid/Zone'})).success,false);
+assert.equal((await db.query("SELECT count(*)::int n FROM outreach_v2.release_function_backups")).rows[0].n,3);
+await db.close();console.log('PASS: legacy media migration, repeat application, all four media kinds, media-only campaigns/replies, queue and inbox contract, tenant/role isolation, metadata checks, idempotency, Riyadh and text compatibility. No live requests or messages.');

@@ -984,6 +984,14 @@ td {
 }
 
 .v2-message-preview { margin: 16px 0; padding: 16px; background: #faf9f8; border: 1px solid #e5e4e8; border-radius: 12px; }
+.v2-attachment-picker { margin-top: 14px; padding: 16px; border: 1px dashed #d7d4d1; border-radius: 12px; background: #fdfcfb; }
+.v2-attachment-picker .v2-field { margin: 0; }
+.v2-attachment-picker input::file-selector-button { border: 1px solid #dedbd8; border-radius: 7px; background: white; padding: 8px 12px; margin-right: 10px; cursor: pointer; }
+.v2-selected-attachment { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 14px; border: 1px solid #e5e4e8; border-radius: 10px; }
+.v2-selected-attachment > div { display: grid; gap: 4px; min-width: 0; }
+.v2-selected-attachment strong { overflow-wrap: anywhere; font-size: 13px; }
+.v2-selected-attachment button { flex-shrink: 0; }
+.v2-message-editor audio { max-width: 100%; }
 .v2-message-editor .v2-actions { flex-wrap: wrap; gap: 8px; }
 .v2-message-editor .v2-actions button { font-size: 12px; }
 .v2-media-preview{display:block;max-width:260px;max-height:220px;border-radius:10px;margin:.5rem 0;object-fit:cover}.v2-bubble audio{max-width:240px}.v2-error{color:#b42318;font-size:.85rem}

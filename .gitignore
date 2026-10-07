@@ -36,3 +36,4 @@ dist-ssr
 **/config.php
 *.pem
 *.key
+release-local/

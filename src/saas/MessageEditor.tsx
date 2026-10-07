@@ -10,9 +10,9 @@ const examples = [
 ];
 export type MediaDraft = { type: "image" | "video" | "audio" | "document"; url: string; mime: string; filename: string; size: number; file?: File } | null;
 const mediaRules = {
-  image: { label: "Image", accept: "image/jpeg,image/png,image/webp", max: 5 * 1024 * 1024 },
+  image: { label: "Image", accept: "image/jpeg,image/png", max: 5 * 1024 * 1024 },
   video: { label: "Video", accept: "video/mp4,video/3gpp", max: 50 * 1024 * 1024 },
-  audio: { label: "Audio / voice note", accept: "audio/aac,audio/mpeg,audio/ogg,audio/amr", max: 16 * 1024 * 1024 },
+  audio: { label: "Voice note", accept: "audio/aac,audio/mpeg,audio/ogg,audio/amr,.aac,.mp3,.ogg,.amr", max: 16 * 1024 * 1024 },
   document: { label: "Document", accept: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt", max: 100 * 1024 * 1024 },
 } as const;
 export function MessageEditor({ value, defaultValue = "", onChange, name, media, onMediaChange }: { value?: string; defaultValue?: string; onChange?: (value: string) => void; name?: string; media?: MediaDraft; onMediaChange?: (media: MediaDraft) => void }) {
@@ -39,19 +39,24 @@ export function MessageEditor({ value, defaultValue = "", onChange, name, media,
   const preview = text.replace(/\{\{([a-z_]+)\}\}/g, (token, key) => (examples[sample] as Record<string, string>)[key] ?? token);
   const [kind, setKind] = useState<keyof typeof mediaRules | "text">(media?.type || "text");
   const [mediaError, setMediaError] = useState("");
+  useEffect(() => { if (media) setKind(media.type); }, [media]);
+  useEffect(() => () => { if (media?.url.startsWith("blob:")) URL.revokeObjectURL(media.url); }, [media?.url]);
+  const selectKind = (next: typeof kind) => { if (next !== kind) onMediaChange?.(null); setKind(next); setMediaError(""); };
   const pickMedia = (file: File | undefined) => {
     if (!file) return;
     const rule = mediaRules[kind as keyof typeof mediaRules];
     if (!rule) return;
     if (file.size > rule.max) { setMediaError(`${rule.label} files must be ${Math.round(rule.max / 1024 / 1024)} MB or smaller.`); return; }
-    if (kind !== "document" && !file.type.startsWith(kind === "audio" ? "audio/" : kind + "/")) { setMediaError(`Choose a valid ${rule.label.toLowerCase()} file.`); return; }
+    const extensions = { image: /\.(jpe?g|png)$/i, video: /\.(mp4|3gp)$/i, audio: /\.(aac|mp3|ogg|amr)$/i, document: /\.(pdf|docx?|xlsx?|pptx?|txt)$/i };
+    if (!file.size || !extensions[kind as keyof typeof extensions].test(file.name) || (kind !== "document" && file.type && !rule.accept.split(",").includes(file.type))) { setMediaError(`Choose a supported ${rule.label.toLowerCase()} file using the formats shown below.`); return; }
     setMediaError("");
     const url = URL.createObjectURL(file);
     onMediaChange?.({ type: kind as "image" | "video" | "audio" | "document", url, mime: file.type, filename: file.name, size: file.size, file });
   };
   return <div className="v2-message-editor">
-    <div className="v2-actions" aria-label="Message type"><button type="button" className={kind === "text" ? "v2-primary" : ""} onClick={() => { setKind("text"); onMediaChange?.(null); }}>Text</button>{(Object.keys(mediaRules) as Array<keyof typeof mediaRules>).map(key => <button type="button" key={key} className={kind === key ? "v2-primary" : ""} onClick={() => setKind(key)}>{mediaRules[key].label}</button>)}</div>
-    {kind !== "text" && <label className="v2-field">Attach {mediaRules[kind].label}<input type="file" accept={mediaRules[kind].accept} onChange={e => pickMedia(e.target.files?.[0])} /></label>}
+    <div className="v2-actions" aria-label="Message type"><button type="button" aria-pressed={kind === "text"} className={kind === "text" ? "v2-primary" : ""} onClick={() => selectKind("text")}>Text</button>{(Object.keys(mediaRules) as Array<keyof typeof mediaRules>).map(key => <button type="button" key={key} aria-pressed={kind === key} className={kind === key ? "v2-primary" : ""} onClick={() => selectKind(key)}>{mediaRules[key].label}</button>)}</div>
+    {kind !== "text" && <div className="v2-attachment-picker"><label className="v2-field">Attach {mediaRules[kind].label.toLowerCase()}<input key={kind} type="file" accept={mediaRules[kind].accept} onChange={e => { pickMedia(e.target.files?.[0]); e.target.value = ""; }} /></label><p className="v2-muted">{kind === "audio" ? "AAC, MP3, OGG or AMR · Delivered as a WhatsApp voice note" : kind === "image" ? "JPG or PNG" : kind === "video" ? "MP4 or 3GP" : "PDF, Word, Excel, PowerPoint or TXT"} · Up to {mediaRules[kind].max / 1024 / 1024} MB</p></div>}
+    {media && <div className="v2-selected-attachment"><div><strong>{media.filename}</strong><span className="v2-muted">{(media.size / 1024 / 1024).toFixed(1)} MB · {mediaRules[media.type].label}</span></div><button type="button" onClick={() => onMediaChange?.(null)} aria-label="Remove attachment">Remove</button></div>}
     {mediaError && <p className="v2-error" role="alert">{mediaError}</p>}
     <label className="v2-field">Message<textarea ref={ref} name={name} value={text} onChange={e => change(e.target.value)} required={!media} maxLength={4096} rows={5} placeholder="Hi {{first_name}}, I saw your company, {{company}}…" /></label>
     <p className="v2-muted">Personalize your message. Click a field to insert it where you’re typing.</p>
@@ -59,7 +64,7 @@ export function MessageEditor({ value, defaultValue = "", onChange, name, media,
     <p className="v2-muted">Each lead’s spreadsheet supplies these values. Use columns such as first_name and company. Missing values become blank; check your leads before starting.</p>
     <section className="v2-message-preview" aria-label="Example message preview">
       <label className="v2-field">Example preview<select value={sample} onChange={e => setSample(Number(e.target.value))}>{examples.map((contact, index) => <option key={contact.name} value={index}>{contact.first_name} · {contact.company}</option>)}</select></label>
-      {media && <p className="v2-muted">Attachment ready: {media.filename}</p>}
+      {media && <><p className="v2-muted">Attachment ready: {media.filename}</p>{media.type === "image" && <img className="v2-media-preview" src={media.url} alt={media.filename} />}{media.type === "video" && <video className="v2-media-preview" src={media.url} controls preload="metadata" />}{media.type === "audio" && <audio src={media.url} controls preload="metadata" />}</>}
       <p className="v2-prewrap">{preview || (media ? "Add an optional caption…" : "Your personalized message will appear here.")}</p>
       <small className="v2-muted">Illustrative contacts only. Actual messages use your imported lead data.</small>
     </section>

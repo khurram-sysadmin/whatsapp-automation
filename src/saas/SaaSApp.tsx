@@ -36,6 +36,7 @@ import {
 import "./saas.css";
 import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
 import { MessageEditor, type MediaDraft } from "./MessageEditor";
+import { MediaPreview } from "./MediaPreview";
 import { AutomaticConnection } from "./AutomaticConnection";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
   return (
@@ -1561,10 +1562,7 @@ export default function SaaSApp() {
                           key={m.messageId}
                         >
                           <p>{m.body}</p>
-                          {m.mediaUrl && m.mediaType === "image" && <img className="v2-media-preview" src={m.mediaUrl} alt={m.mediaFilename || "Image attachment"} />}
-                          {m.mediaUrl && m.mediaType === "video" && <video className="v2-media-preview" src={m.mediaUrl} controls />}
-                          {m.mediaUrl && m.mediaType === "audio" && <audio src={m.mediaUrl} controls />}
-                          {m.mediaUrl && m.mediaType === "document" && <a href={m.mediaUrl} target="_blank" rel="noreferrer">📎 {m.mediaFilename || "Open document"}</a>}
+                          {m.mediaUrl && <MediaPreview url={m.mediaUrl} type={m.mediaType} filename={m.mediaFilename} />}
                           <small>
                             {date(m.createdAt)} · {m.status}
                           </small>

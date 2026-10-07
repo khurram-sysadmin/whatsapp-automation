@@ -26,7 +26,8 @@ const intlWithTimeZones = Intl as typeof Intl & {
 
 export const TIME_ZONES = Array.from(new Set([
   'UTC',
-  ...(intlWithTimeZones.supportedValuesOf?.('timeZone') ?? fallbackZones),
+  ...fallbackZones,
+  ...(intlWithTimeZones.supportedValuesOf?.('timeZone') ?? []),
 ])).sort((a, b) => a.localeCompare(b));
 
 export function timeZoneLabel(zone: string): string {
@@ -36,9 +37,9 @@ export function timeZoneLabel(zone: string): string {
       timeZone: zone,
       timeZoneName: 'shortOffset',
     }).formatToParts(new Date()).find((part) => part.type === 'timeZoneName')?.value ?? '';
-    return `${zone} (${offset.replace('GMT', 'UTC')})`;
+    const friendly: Record<string, string> = { 'Asia/Riyadh': 'Saudi Arabia · Riyadh', 'Asia/Karachi': 'Pakistan · Karachi', 'Asia/Dubai': 'United Arab Emirates · Dubai' };
+    return `${friendly[zone] || zone.replaceAll('_', ' ')} (${offset.replace('GMT', 'UTC')})`;
   } catch {
     return zone;
   }
 }
-

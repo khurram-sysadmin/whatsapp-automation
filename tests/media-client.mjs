@@ -1,0 +1,15 @@
+import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';import assert from 'node:assert/strict';import {webcrypto} from 'node:crypto';
+const source=fs.readFileSync('src/saas/client.ts','utf8').replaceAll('import.meta.env','fixtureEnv');
+const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const calls=[],exports={};let storageError=null;
+const storage={from:bucket=>({upload:async(path,file,options)=>{calls.push({bucket,path,options});return {error:storageError};},createSignedUrl:async(path,expiresIn)=>{calls.push({bucket,path,expiresIn});return {data:{signedUrl:'https://fixture.supabase.co/private-download?token=fixture'},error:storageError};}})};
+new vm.Script(compiled).runInContext(vm.createContext({exports,fixtureEnv:{DEV:true,VITE_SUPABASE_URL:'https://fixture.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'fixture-public',VITE_OUTREACH_API_URL:'https://fixture.invalid/api',VITE_OUTREACH_IMPORT_URL:'https://fixture.invalid/import'},window:{location:{origin:'https://fixture.invalid'},sessionStorage:{}},require:()=>({createClient:()=>({storage})}),crypto:webcrypto,URL,FormData,File,AbortController,AbortSignal,setTimeout,clearTimeout}));
+const file=new File(['fixture'],'private photo.jpg',{type:'image/jpeg'});
+const uploaded=await exports.uploadMedia('workspace-fixture',file);
+assert.ok(uploaded.url.startsWith('https://fixture.supabase.co/storage/v1/object/authenticated/outreach-media/workspace-fixture/'));assert.equal(uploaded.url.includes('token='),false);assert.equal(calls[0].options.upsert,false);assert.equal(uploaded.mime,'image/jpeg');
+assert.equal((await exports.uploadMedia('workspace-fixture',file)).url,uploaded.url);assert.equal(calls.length,1);
+assert.equal(await exports.resolveMediaUrl(uploaded.url),'https://fixture.supabase.co/private-download?token=fixture');assert.equal(calls.at(-1).expiresIn,600);
+const missingMime=await exports.uploadMedia('workspace-fixture',new File(['fixture'],'note.mp3'));assert.equal(missingMime.mime,'audio/mpeg');
+storageError=new Error('fixture-storage-failure');await assert.rejects(exports.resolveMediaUrl(uploaded.url),/preview is unavailable/);await assert.rejects(exports.uploadMedia('workspace-fixture',new File(['fixture'],'failure.jpg',{type:'image/jpeg'})),/could not be uploaded/);
+assert.equal(await exports.resolveMediaUrl('https://legacy.invalid/file.pdf'),'https://legacy.invalid/file.pdf');
+console.log('PASS: stable private references, fresh 10-minute previews, format metadata fallback, no overwrite and safe storage errors. No external requests.');

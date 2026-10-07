@@ -1,4 +1,3 @@
-BEGIN;
 CREATE OR REPLACE FUNCTION outreach_v2.api_v2(uid uuid,p jsonb,provider_proof jsonb DEFAULT '{}'::jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE a text:=p->>'action'; rid text:=coalesce(p->>'requestId','req_'||gen_random_uuid()::text); wid uuid; sid uuid; cid uuid; conv_id uuid;
  c outreach_v2.campaigns; s outreach.whatsapp_sessions; wc outreach.workspace_contacts; conv outreach.conversations;
@@ -7,14 +6,14 @@ DECLARE a text:=p->>'action'; rid text:=coalesce(p->>'requestId','req_'||gen_ran
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM auth.users WHERE id=uid) THEN RETURN outreach_v2.result_v2(rid,NULL,'UNAUTHORIZED','Sign in again.'); END IF;
  IF p IS NULL OR jsonb_typeof(p)<>'object' OR a IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Choose an action.'); END IF;
- IF a<>ALL(ARRAY['bootstrap','adminOverview','workspaceCreate','workspaceUpdate','profileUpdate','sessionList','sessionCreate','sessionConnect','sessionStatus','sessionDisconnect','sessionDelete','create','list','detail','start','pause','resume','stop','delete','stats','messages','contacts','templates','saveTemplate','suppress','inbox','conversation','reply','markConversationRead','subscription','usage','health','import']) THEN
+ IF a<>ALL(ARRAY['bootstrap','workspaceCreate','workspaceUpdate','profileUpdate','sessionList','sessionCreate','sessionConnect','sessionStatus','sessionDisconnect','sessionDelete','create','list','detail','start','pause','resume','stop','delete','stats','messages','contacts','templates','saveTemplate','suppress','inbox','conversation','reply','markConversationRead','subscription','usage','health','import']) THEN
   RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Unknown action.');
  END IF;
  wid:=nullif(p->>'workspaceId','')::uuid; IF a IN ('workspaceCreate','profileUpdate') THEN wid:=NULL; END IF; sid:=nullif(p->>'whatsappSessionId','')::uuid; cid:=nullif(p->>'campaignId','')::uuid; conv_id:=nullif(p->>'conversationId','')::uuid;
  is_write:=a=ANY(ARRAY['workspaceCreate','workspaceUpdate','profileUpdate','sessionCreate','sessionConnect','sessionDisconnect','sessionDelete','create','start','pause','resume','stop','delete','saveTemplate','suppress','reply','markConversationRead','import']);
  IF is_write AND (p->>'requestId' IS NULL OR length(p->>'requestId') NOT BETWEEN 8 AND 128) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','requestId must contain 8–128 characters.'); END IF;
  IF wid IS NOT NULL AND NOT outreach_v2.allowed_v2(wid,uid) THEN RETURN outreach_v2.result_v2(rid,NULL,'FORBIDDEN','Workspace access denied.'); END IF;
- IF a<>ALL(ARRAY['bootstrap','adminOverview','workspaceCreate','profileUpdate']) AND wid IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','workspaceId is required.'); END IF;
+ IF a<>ALL(ARRAY['bootstrap','workspaceCreate','profileUpdate']) AND wid IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','workspaceId is required.'); END IF;
  IF is_write AND wid IS NOT NULL THEN
   IF NOT outreach_v2.allowed_v2(wid,uid,CASE WHEN a=ANY(ARRAY['workspaceUpdate','sessionCreate','sessionConnect','sessionDisconnect','sessionDelete']) THEN ARRAY['owner','admin'] ELSE ARRAY['owner','admin','agent'] END) THEN RETURN outreach_v2.result_v2(rid,NULL,'FORBIDDEN','Your role cannot perform this action.'); END IF;
  END IF;
@@ -44,13 +43,11 @@ BEGIN
  CASE a
  WHEN 'bootstrap' THEN
   SELECT jsonb_build_object('user',jsonb_build_object('userId',u.id,'email',u.email,'fullName',coalesce(pr.full_name,'')),'workspaces',coalesce((SELECT jsonb_agg(jsonb_build_object('workspaceId',w.id,'companyName',w.company_name,'timezone',w.timezone,'status',w.status,'role',m.role,'onboardingStep',w.onboarding_step) ORDER BY w.created_at) FROM public.workspaces w JOIN public.workspace_members m ON m.workspace_id=w.id WHERE m.user_id=uid),'[]'::jsonb),'currentWorkspaceId',(SELECT workspace_id FROM public.workspace_members WHERE user_id=uid ORDER BY joined_at LIMIT 1),'providerMode','customer_api_key') INTO response FROM auth.users u LEFT JOIN public.profiles pr ON pr.user_id=u.id WHERE u.id=uid;
- WHEN 'adminOverview' THEN
-  BEGIN response:=outreach_v2.admin_usage_v2(uid); EXCEPTION WHEN insufficient_privilege THEN RETURN outreach_v2.result_v2(rid,NULL,'FORBIDDEN','Platform admin access required.'); END;
  WHEN 'workspaceCreate' THEN
   IF length(btrim(coalesce(p->>'companyName',''))) NOT BETWEEN 1 AND 200 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=coalesce(p->>'timezone','Asia/Karachi')) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Enter a company name and valid timezone.'); END IF;
   INSERT INTO public.workspaces(company_name,slug,timezone,created_by,onboarding_step) VALUES(btrim(p->>'companyName'),'company-'||gen_random_uuid(),coalesce(p->>'timezone','Asia/Karachi'),uid,'whatsapp') RETURNING id INTO inserted_id;
   INSERT INTO public.workspace_members(workspace_id,user_id,role) VALUES(inserted_id,uid,'owner');
-  INSERT INTO public.subscriptions(workspace_id,plan_code,status) VALUES(inserted_id,'beta','active');
+  INSERT INTO public.subscriptions(workspace_id,plan_code,status,trial_ends_at) VALUES(inserted_id,'trial','trialing',now()+interval '3 days');
   response:=jsonb_build_object('workspaceId',inserted_id);
  WHEN 'workspaceUpdate' THEN
   IF length(btrim(coalesce(p->>'companyName',''))) NOT BETWEEN 1 AND 200 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=coalesce(p->>'timezone','')) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Enter a company name and valid timezone.'); END IF;
@@ -102,9 +99,9 @@ BEGIN
   response:=jsonb_build_object('whatsappSessionId',sid,'status','disconnected','removed',a='sessionDelete');
  WHEN 'create' THEN
   IF sid IS NULL OR s.status<>'connected' OR s.api_key_secret_id IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'PROVIDER_NOT_CONFIGURED','Connect a customer WASender API key first.'); END IF;
-  IF length(btrim(coalesce(p->>'name',''))) NOT BETWEEN 1 AND 200 OR length(coalesce(p->>'template','')) NOT BETWEEN 0 AND 4096 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=coalesce(p->>'timezone','')) OR (p->>'mediaType' IS NOT NULL AND p->>'mediaType' NOT IN ('image','video','audio','document')) OR (p->>'mediaType' IS NOT NULL AND coalesce(p->>'mediaUrl','') !~* '^https://') OR (p->>'mediaType' IS NULL AND length(coalesce(p->>'template',''))<1) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Check campaign name, message, attachment and timezone.'); END IF;
-  IF length(btrim(coalesce(p->>'template','')))>0 THEN PERFORM outreach.personalize(p->>'template','{}'::jsonb); END IF;
-  INSERT INTO outreach_v2.campaigns(workspace_id,whatsapp_session_id,created_by,name,template,media_type,media_url,media_mime,media_filename,media_size_bytes,timezone,sending_start_time,sending_end_time,send_interval_seconds) VALUES(wid,sid,uid,btrim(p->>'name'),coalesce(p->>'template',''),p->>'mediaType',p->>'mediaUrl',p->>'mediaMime',p->>'mediaFilename',(p->>'mediaSizeBytes')::integer,p->>'timezone',(p->>'sendingStartTime')::time,(p->>'sendingEndTime')::time,(p->>'sendIntervalSeconds')::integer) RETURNING * INTO c;
+  IF length(btrim(coalesce(p->>'name',''))) NOT BETWEEN 1 AND 200 OR length(coalesce(p->>'template','')) NOT BETWEEN 1 AND 4096 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=coalesce(p->>'timezone','')) THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Check campaign name, template and timezone.'); END IF;
+  PERFORM outreach.personalize(p->>'template','{}'::jsonb);
+  INSERT INTO outreach_v2.campaigns(workspace_id,whatsapp_session_id,created_by,name,template,timezone,sending_start_time,sending_end_time,send_interval_seconds) VALUES(wid,sid,uid,btrim(p->>'name'),p->>'template',p->>'timezone',(p->>'sendingStartTime')::time,(p->>'sendingEndTime')::time,(p->>'sendIntervalSeconds')::integer) RETURNING * INTO c;
   response:=outreach_v2.campaign_json_v2(c);
  WHEN 'list' THEN
   SELECT coalesce(jsonb_agg(outreach_v2.campaign_json_v2(q)),'[]'::jsonb) INTO response FROM (SELECT * FROM outreach_v2.campaigns WHERE workspace_id=wid AND deleted_at IS NULL ORDER BY created_at DESC,id LIMIT limit_n OFFSET offset_n) q;
@@ -125,8 +122,8 @@ BEGIN
    SELECT * INTO s FROM outreach.whatsapp_sessions WHERE id=c.whatsapp_session_id AND workspace_id=wid AND deleted_at IS NULL;
    IF s.status<>'connected' OR s.api_key_secret_id IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'PROVIDER_NOT_CONNECTED','The selected WhatsApp connection is not ready.'); END IF;
    IF NOT EXISTS(SELECT 1 FROM public.subscriptions WHERE workspace_id=wid AND status IN ('active','trialing')) THEN RETURN outreach_v2.result_v2(rid,NULL,'SUBSCRIPTION_REQUIRED','An active subscription is required.'); END IF;
-   INSERT INTO outreach_v2.messages(workspace_id,whatsapp_session_id,campaign_id,contact_id,workspace_contact_id,phone_e164,personalized_message,media_type,media_url,media_mime,media_filename,media_size_bytes)
-   SELECT wid,c.whatsapp_session_id,cid,ct.id,wc2.id,wc2.phone_e164,CASE WHEN length(btrim(c.template))=0 AND c.media_type IS NOT NULL THEN '' ELSE outreach.personalize(c.template,to_jsonb(wc2)||jsonb_build_object('phone',wc2.phone_e164)) END,c.media_type,c.media_url,c.media_mime,c.media_filename,c.media_size_bytes FROM outreach_v2.contacts ct JOIN outreach.workspace_contacts wc2 ON wc2.id=ct.workspace_contact_id AND wc2.workspace_id=wid WHERE ct.campaign_id=cid AND ct.status='valid' AND NOT EXISTS(SELECT 1 FROM outreach.workspace_suppressions su WHERE su.workspace_id=wid AND su.phone_e164=wc2.phone_e164) ON CONFLICT(contact_id) DO NOTHING;
+   INSERT INTO outreach_v2.messages(workspace_id,whatsapp_session_id,campaign_id,contact_id,workspace_contact_id,phone_e164,personalized_message)
+   SELECT wid,c.whatsapp_session_id,cid,ct.id,wc2.id,wc2.phone_e164,outreach.personalize(c.template,to_jsonb(wc2)||jsonb_build_object('phone',wc2.phone_e164)) FROM outreach_v2.contacts ct JOIN outreach.workspace_contacts wc2 ON wc2.id=ct.workspace_contact_id AND wc2.workspace_id=wid WHERE ct.campaign_id=cid AND ct.status='valid' AND NOT EXISTS(SELECT 1 FROM outreach.workspace_suppressions su WHERE su.workspace_id=wid AND su.phone_e164=wc2.phone_e164) ON CONFLICT(contact_id) DO NOTHING;
    GET DIAGNOSTICS n=ROW_COUNT; IF n=0 THEN RETURN outreach_v2.result_v2(rid,NULL,'NO_CONTACTS','Import eligible contacts before starting.'); END IF;
    UPDATE outreach_v2.contacts SET status='queued' WHERE campaign_id=cid AND status='valid' AND EXISTS(SELECT 1 FROM outreach_v2.messages m WHERE m.contact_id=outreach_v2.contacts.id);
    UPDATE outreach_v2.campaigns SET status='running',started_at=now(),next_send_at=now() WHERE id=cid;
@@ -158,7 +155,7 @@ BEGIN
  WHEN 'contacts' THEN
   SELECT coalesce(jsonb_agg(outreach_v2.contact_json_v2(q)),'[]'::jsonb) INTO response FROM (SELECT wc2.* FROM outreach.workspace_contacts wc2 WHERE workspace_id=wid AND (cid IS NULL OR EXISTS(SELECT 1 FROM outreach_v2.contacts ct WHERE ct.campaign_id=cid AND ct.workspace_contact_id=wc2.id)) ORDER BY created_at DESC,id LIMIT limit_n OFFSET offset_n) q;
  WHEN 'messages' THEN
-  SELECT coalesce(jsonb_agg(jsonb_build_object('messageId',q.id,'campaignId',q.campaign_id,'whatsappSessionId',q.whatsapp_session_id,'contactId',q.workspace_contact_id,'phoneE164',q.phone_e164,'personalizedMessage',q.personalized_message,'mediaType',q.media_type,'mediaUrl',q.media_url,'mediaMime',q.media_mime,'mediaFilename',q.media_filename,'status',q.status,'createdAt',q.created_at,'sentAt',q.sent_at,'error',q.error)),'[]'::jsonb) INTO response FROM (SELECT * FROM outreach_v2.messages WHERE workspace_id=wid AND (cid IS NULL OR campaign_id=cid) AND (campaign_id IS NULL OR EXISTS(SELECT 1 FROM outreach_v2.campaigns ca WHERE ca.id=campaign_id AND ca.deleted_at IS NULL)) ORDER BY created_at DESC,id LIMIT limit_n OFFSET offset_n) q;
+  SELECT coalesce(jsonb_agg(jsonb_build_object('messageId',q.id,'campaignId',q.campaign_id,'whatsappSessionId',q.whatsapp_session_id,'contactId',q.workspace_contact_id,'phoneE164',q.phone_e164,'personalizedMessage',q.personalized_message,'status',q.status,'createdAt',q.created_at,'sentAt',q.sent_at,'error',q.error)),'[]'::jsonb) INTO response FROM (SELECT * FROM outreach_v2.messages WHERE workspace_id=wid AND (cid IS NULL OR campaign_id=cid) AND (campaign_id IS NULL OR EXISTS(SELECT 1 FROM outreach_v2.campaigns ca WHERE ca.id=campaign_id AND ca.deleted_at IS NULL)) ORDER BY created_at DESC,id LIMIT limit_n OFFSET offset_n) q;
  WHEN 'stats' THEN
   SELECT jsonb_build_object('totalContacts',(SELECT count(*) FROM outreach.workspace_contacts WHERE workspace_id=wid),'campaigns',(SELECT count(*) FROM outreach_v2.campaigns WHERE workspace_id=wid AND deleted_at IS NULL),'queued',count(*) FILTER(WHERE m.status IN ('queued','leased')),'sending',count(*) FILTER(WHERE m.status='dispatching'),'sent',count(*) FILTER(WHERE m.sent_at IS NOT NULL),'delivered',count(*) FILTER(WHERE m.delivered_at IS NOT NULL),'read',count(*) FILTER(WHERE m.read_at IS NOT NULL),'failed',count(*) FILTER(WHERE m.status='failed'),'needsReview',count(*) FILTER(WHERE m.status='unknown'),'replied',(SELECT count(*) FROM outreach.conversation_messages cm WHERE cm.workspace_id=wid AND cm.direction='inbound'),'optedOut',(SELECT count(*) FROM outreach.workspace_suppressions WHERE workspace_id=wid)) INTO response FROM outreach_v2.messages m JOIN outreach_v2.campaigns ca ON ca.id=m.campaign_id WHERE m.workspace_id=wid AND ca.deleted_at IS NULL AND (cid IS NULL OR m.campaign_id=cid);
  WHEN 'templates' THEN SELECT coalesce(jsonb_agg(jsonb_build_object('templateId',q.id,'name',q.name,'body',q.body)),'[]'::jsonb) INTO response FROM (SELECT * FROM outreach.workspace_templates WHERE workspace_id=wid ORDER BY created_at DESC LIMIT limit_n OFFSET offset_n) q;
@@ -178,21 +175,21 @@ BEGIN
   SELECT coalesce(jsonb_agg(q.data),'[]'::jsonb) INTO response FROM (SELECT jsonb_build_object('conversationId',co.id,'whatsappSessionId',co.whatsapp_session_id,'contact',outreach_v2.contact_json_v2(wc2),'lastMessage',co.last_message_preview,'lastMessageAt',co.last_message_at,'unreadCount',co.unread_count) data FROM outreach.conversations co JOIN outreach.workspace_contacts wc2 ON wc2.id=co.workspace_contact_id AND wc2.workspace_id=wid WHERE co.workspace_id=wid ORDER BY co.last_message_at DESC NULLS LAST,co.id LIMIT limit_n OFFSET offset_n) q;
  WHEN 'conversation' THEN
   IF conv_id IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Select a conversation.'); END IF;
-  SELECT jsonb_build_object('conversationId',conv.id,'whatsappSessionId',conv.whatsapp_session_id,'contact',outreach_v2.contact_json_v2(wc2),'messages',coalesce((SELECT jsonb_agg(jsonb_build_object('messageId',q.id,'direction',q.direction,'body',q.body,'mediaType',q.media_type,'mediaUrl',q.media_url,'mediaMime',q.media_mime,'mediaFilename',q.media_filename,'status',q.status,'createdAt',q.created_at) ORDER BY q.created_at,q.id) FROM (SELECT * FROM outreach.conversation_messages WHERE conversation_id=conv_id AND workspace_id=wid ORDER BY created_at DESC,id LIMIT limit_n OFFSET offset_n) q),'[]'::jsonb)) INTO response FROM outreach.workspace_contacts wc2 WHERE wc2.id=conv.workspace_contact_id AND wc2.workspace_id=wid;
+  SELECT jsonb_build_object('conversationId',conv.id,'whatsappSessionId',conv.whatsapp_session_id,'contact',outreach_v2.contact_json_v2(wc2),'messages',coalesce((SELECT jsonb_agg(jsonb_build_object('messageId',q.id,'direction',q.direction,'body',q.body,'status',q.status,'createdAt',q.created_at) ORDER BY q.created_at,q.id) FROM (SELECT * FROM outreach.conversation_messages WHERE conversation_id=conv_id AND workspace_id=wid ORDER BY created_at DESC,id LIMIT limit_n OFFSET offset_n) q),'[]'::jsonb)) INTO response FROM outreach.workspace_contacts wc2 WHERE wc2.id=conv.workspace_contact_id AND wc2.workspace_id=wid;
  WHEN 'reply' THEN
-  IF conv_id IS NULL OR length(btrim(coalesce(p->>'text',''))) NOT BETWEEN 0 AND 4096 OR (length(btrim(coalesce(p->>'text','')))=0 AND p->>'mediaType' IS NULL) OR (p->>'mediaType' IS NOT NULL AND p->>'mediaType' NOT IN ('image','video','audio','document')) OR (p->>'mediaType' IS NOT NULL AND coalesce(p->>'mediaUrl','') !~* '^https://') THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Enter a reply or attach a valid media file.'); END IF;
+  IF conv_id IS NULL OR length(btrim(coalesce(p->>'text',''))) NOT BETWEEN 1 AND 4096 THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Enter a reply.'); END IF;
   SELECT * INTO wc FROM outreach.workspace_contacts WHERE id=conv.workspace_contact_id AND workspace_id=wid;
   SELECT * INTO s FROM outreach.whatsapp_sessions WHERE id=conv.whatsapp_session_id AND workspace_id=wid AND deleted_at IS NULL;
   IF s.status<>'connected' OR s.api_key_secret_id IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'PROVIDER_NOT_CONNECTED','The conversation WhatsApp connection is not ready.'); END IF;
   IF EXISTS(SELECT 1 FROM outreach.workspace_suppressions WHERE workspace_id=wid AND phone_e164=wc.phone_e164) THEN RETURN outreach_v2.result_v2(rid,NULL,'RECIPIENT_SUPPRESSED','This contact has opted out.'); END IF;
-  INSERT INTO outreach.conversation_messages(workspace_id,conversation_id,whatsapp_session_id,workspace_contact_id,direction,body,media_type,media_url,media_mime,media_filename,media_size_bytes,status) VALUES(wid,conv_id,conv.whatsapp_session_id,wc.id,'outbound',btrim(p->>'text'),p->>'mediaType',p->>'mediaUrl',p->>'mediaMime',p->>'mediaFilename',(p->>'mediaSizeBytes')::integer,'queued') RETURNING id INTO inserted_id;
-  INSERT INTO outreach_v2.messages(workspace_id,whatsapp_session_id,workspace_contact_id,conversation_message_id,phone_e164,personalized_message,media_type,media_url,media_mime,media_filename,media_size_bytes) VALUES(wid,conv.whatsapp_session_id,wc.id,inserted_id,wc.phone_e164,btrim(p->>'text'),p->>'mediaType',p->>'mediaUrl',p->>'mediaMime',p->>'mediaFilename',(p->>'mediaSizeBytes')::integer);
+  INSERT INTO outreach.conversation_messages(workspace_id,conversation_id,whatsapp_session_id,workspace_contact_id,direction,body,status) VALUES(wid,conv_id,conv.whatsapp_session_id,wc.id,'outbound',btrim(p->>'text'),'queued') RETURNING id INTO inserted_id;
+  INSERT INTO outreach_v2.messages(workspace_id,whatsapp_session_id,workspace_contact_id,conversation_message_id,phone_e164,personalized_message) VALUES(wid,conv.whatsapp_session_id,wc.id,inserted_id,wc.phone_e164,btrim(p->>'text'));
   UPDATE outreach.conversations SET last_message_preview=left(btrim(p->>'text'),200),last_message_at=now(),updated_at=now() WHERE id=conv_id;
   response:=jsonb_build_object('messageId',inserted_id,'conversationId',conv_id,'status','queued');
  WHEN 'markConversationRead' THEN
   IF conv_id IS NULL THEN RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Select a conversation.'); END IF;
   UPDATE outreach.conversations SET unread_count=0,updated_at=now() WHERE id=conv_id; response:=jsonb_build_object('conversationId',conv_id,'unreadCount',0);
- WHEN 'subscription' THEN SELECT jsonb_build_object('planCode',su.plan_code,'status',su.status,'whatsappSessionLimit',pl.max_whatsapp_sessions,'teamMemberLimit',pl.max_team_members,'contactLimit',pl.max_contacts,'monthlyMessageLimit',pl.max_monthly_messages) INTO response FROM public.subscriptions su JOIN public.plans pl ON pl.code=su.plan_code WHERE su.workspace_id=wid;
+ WHEN 'subscription' THEN SELECT jsonb_build_object('planCode',su.plan_code,'status',CASE WHEN su.status='trialing' AND su.trial_ends_at IS NOT NULL AND su.trial_ends_at<=now() THEN 'expired' ELSE su.status END,'trialEndsAt',su.trial_ends_at,'currentPeriodEnd',su.current_period_end,'billingProvider',su.billing_provider,'checkoutUrl',su.checkout_url,'whatsappSessionLimit',pl.max_whatsapp_sessions,'teamMemberLimit',pl.max_team_members,'contactLimit',pl.max_contacts,'monthlyMessageLimit',pl.max_monthly_messages) INTO response FROM public.subscriptions su JOIN public.plans pl ON pl.code=su.plan_code WHERE su.workspace_id=wid;
  WHEN 'usage' THEN SELECT jsonb_build_object('messagesSent',coalesce(q.messages_sent,0),'campaignsStarted',coalesce(q.campaigns_started,0),'contactsImported',coalesce(q.contacts_imported,0)) INTO response FROM (SELECT 1) seed LEFT JOIN outreach.usage_monthly q ON q.workspace_id=wid AND q.period_start=date_trunc('month',now())::date;
  WHEN 'health' THEN response:=jsonb_build_object('backendReady',true,'providerMode','customer_api_key','schemaVersion',2);
  END CASE;
@@ -205,6 +202,30 @@ BEGIN
 EXCEPTION WHEN invalid_text_representation OR check_violation OR not_null_violation OR invalid_datetime_format OR datetime_field_overflow OR raise_exception OR unique_violation OR foreign_key_violation THEN
  RETURN outreach_v2.result_v2(rid,NULL,'INVALID_REQUEST','Check the request fields and current state.');
 END $$;
-
-COMMIT;
-NOTIFY pgrst,'reload schema';
+CREATE OR REPLACE FUNCTION outreach_v2.finish_send_v2(p jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE m outreach_v2.messages; state text; outcome text:=p->>'outcome'; convo uuid; outbound uuid;
+BEGIN
+ PERFORM 1 FROM outreach.whatsapp_sessions s WHERE s.id=(SELECT whatsapp_session_id FROM outreach_v2.messages WHERE id=(p->>'messageId')::uuid) FOR UPDATE;
+ SELECT * INTO m FROM outreach_v2.messages WHERE id=(p->>'messageId')::uuid AND lease_token=(p->>'leaseToken')::uuid FOR UPDATE;
+ IF NOT FOUND OR m.status NOT IN ('dispatching','unknown','sent','delivered','read','failed') THEN RETURN jsonb_build_object('saved',false); END IF;
+ IF m.provider_response IS NOT NULL THEN RETURN jsonb_build_object('saved',true,'duplicate',true); END IF;
+ IF outcome<>ALL(ARRAY['accepted','retry','permanent','unknown']) THEN RAISE EXCEPTION 'Invalid outcome'; END IF;
+ state:=CASE WHEN outcome='accepted' THEN 'sent' WHEN outcome='retry' AND m.attempts<3 THEN 'queued' WHEN outcome IN ('retry','permanent') THEN 'failed' ELSE 'unknown' END;
+ IF state='queued' AND (EXISTS(SELECT 1 FROM outreach.workspace_suppressions WHERE workspace_id=m.workspace_id AND phone_e164=m.phone_e164) OR EXISTS(SELECT 1 FROM outreach_v2.campaigns WHERE id=m.campaign_id AND (status='stopped' OR deleted_at IS NOT NULL))) THEN state:='canceled'; END IF;
+ INSERT INTO outreach_v2.message_attempts(message_id,attempt,outcome,response,error) VALUES(m.id,m.attempts,outcome,coalesce(p->'safeResponse','{}'::jsonb),left(p->>'error',1000)) ON CONFLICT DO NOTHING;
+ UPDATE outreach_v2.messages SET status=state,provider_message_id=coalesce(p->>'providerMessageId',provider_message_id),provider_aliases=ARRAY(SELECT jsonb_array_elements_text(coalesce(p->'providerAliases','[]'::jsonb))),provider_response=coalesce(p->'safeResponse','{}'::jsonb),sent_at=CASE WHEN outcome='accepted' THEN coalesce(sent_at,now()) ELSE sent_at END,lease_until=NULL,error=left(p->>'error',1000),scheduled_at=CASE WHEN state='queued' THEN now()+make_interval(secs=>greatest(CASE WHEN attempts=1 THEN 300 ELSE 900 END,least(coalesce((p->>'retryAfter')::integer,0),86400))) ELSE scheduled_at END WHERE id=m.id;
+ IF outcome='accepted' AND m.sent_at IS NULL THEN
+  UPDATE public.workspaces SET onboarding_step='complete',onboarding_completed_at=coalesce(onboarding_completed_at,now()) WHERE id=m.workspace_id AND onboarding_step='test' AND EXISTS(SELECT 1 FROM outreach.whatsapp_sessions WHERE id=m.whatsapp_session_id AND last_webhook_at IS NOT NULL);
+  INSERT INTO outreach.usage_monthly(workspace_id,period_start,messages_sent) VALUES(m.workspace_id,date_trunc('month',now())::date,1) ON CONFLICT(workspace_id,period_start) DO UPDATE SET messages_sent=outreach.usage_monthly.messages_sent+1;
+  IF m.conversation_message_id IS NULL THEN
+   INSERT INTO outreach.conversations(workspace_id,whatsapp_session_id,workspace_contact_id) VALUES(m.workspace_id,m.whatsapp_session_id,m.workspace_contact_id) ON CONFLICT(workspace_id,whatsapp_session_id,workspace_contact_id) DO UPDATE SET updated_at=now() RETURNING id INTO convo;
+   INSERT INTO outreach.conversation_messages(workspace_id,conversation_id,whatsapp_session_id,workspace_contact_id,direction,body,status,provider_message_id) VALUES(m.workspace_id,convo,m.whatsapp_session_id,m.workspace_contact_id,'outbound',m.personalized_message,'sent',p->>'providerMessageId') RETURNING id INTO outbound;
+   UPDATE outreach_v2.messages SET conversation_message_id=outbound WHERE id=m.id;
+   UPDATE outreach.conversations SET last_message_preview=left(m.personalized_message,200),last_message_at=now(),updated_at=now() WHERE id=convo;
+  END IF;
+ END IF;
+ UPDATE outreach.conversation_messages SET status=CASE WHEN state IN ('sent','failed') THEN state ELSE status END,provider_message_id=coalesce(p->>'providerMessageId',provider_message_id) WHERE id=m.conversation_message_id;
+ UPDATE outreach_v2.contacts SET status=CASE WHEN outcome='accepted' THEN 'sent' WHEN state='failed' THEN 'failed' ELSE status END WHERE id=m.contact_id AND status NOT IN ('opted_out','replied');
+ PERFORM outreach_v2.complete_v2(m.campaign_id);
+ RETURN jsonb_build_object('saved',true,'status',state);
+END $$;

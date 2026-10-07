@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test:lifecycle": "node tests/lifecycle.mjs",
+    "test:v2-media": "node tests/v2-media.mjs && node tests/v2-media-workflow.mjs && node tests/media-client.mjs",
     "test:v2-foundation": "node tests/v2-foundation.mjs",
     "test:v2-runtime": "node tests/v2-runtime.mjs",
     "test:v2-workflow": "node tests/v2-workflow.mjs",

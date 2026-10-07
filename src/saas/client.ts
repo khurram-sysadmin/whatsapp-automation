@@ -238,22 +238,37 @@ export async function importContacts(
   ids.delete(scope);
   return result;
 }
-export async function uploadMedia(workspaceId: string, file: File) {
+const mediaUploads = new WeakMap<File, Map<string, Promise<{ url: string; mime: string; filename: string; size: number }>>>();
+export function uploadMedia(workspaceId: string, file: File) {
+  const scoped = mediaUploads.get(file) || new Map();
+  mediaUploads.set(file, scoped);
+  const existing = scoped.get(workspaceId);
+  if (existing) return existing;
+  const pending = uploadMediaOnce(workspaceId, file).catch(error => { scoped.delete(workspaceId); throw error; });
+  scoped.set(workspaceId, pending);
+  return pending;
+}
+async function uploadMediaOnce(workspaceId: string, file: File) {
   if (!supabase) throw new Error("Media upload is unavailable. Please try again later.");
   if (file.size > 100 * 1024 * 1024) throw new Error("Attachments must be 100 MB or smaller.");
   const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "attachment";
   const path = `${workspaceId}/${crypto.randomUUID()}-${safe}`;
-  const { error } = await supabase.storage.from("outreach-media").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
+  const fallbackMime: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", mp4: "video/mp4", "3gp": "video/3gpp", aac: "audio/aac", mp3: "audio/mpeg", ogg: "audio/ogg", amr: "audio/amr", pdf: "application/pdf", txt: "text/plain", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation" };
+  const mime = file.type || fallbackMime[file.name.split(".").pop()?.toLowerCase() || ""] || "application/octet-stream";
+  const { error } = await supabase.storage.from("outreach-media").upload(path, file, { upsert: false, contentType: mime });
   if (error) throw new Error("The attachment could not be uploaded. Please try again.");
-  // Production media storage is private. The signed URL is short-lived and
-  // scoped to the uploaded object, while still giving WASender access during
-  // the campaign send window without exposing the bucket publicly.
-  const { data, error: signedUrlError } = await supabase.storage
-    .from("outreach-media")
-    .createSignedUrl(path, 7 * 24 * 60 * 60);
-  if (signedUrlError || !data?.signedUrl) {
-    await supabase.storage.from("outreach-media").remove([path]);
-    throw new Error("The attachment URL could not be secured. Please try again.");
-  }
-  return { url: data.signedUrl, mime: file.type, filename: file.name, size: file.size };
+  // Persist an object reference, never an expiring download token. The worker
+  // signs it immediately before delivery; the dashboard signs previews on demand.
+  const url = `${config.supabaseUrl}/storage/v1/object/authenticated/outreach-media/${path}`;
+  return { url, mime, filename: file.name, size: file.size };
+}
+
+export async function resolveMediaUrl(url: string) {
+  const prefix = `${config.supabaseUrl}/storage/v1/object/authenticated/outreach-media/`;
+  if (!url.startsWith(prefix)) return url;
+  if (!supabase) throw new Error("Attachment preview is unavailable.");
+  const path = url.slice(prefix.length);
+  const { data, error } = await supabase.storage.from("outreach-media").createSignedUrl(path, 600);
+  if (error || !data?.signedUrl) throw new Error("Attachment preview is unavailable.");
+  return data.signedUrl;
 }
