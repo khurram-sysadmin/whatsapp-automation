@@ -1052,3 +1052,82 @@ td {
 .v2-template-variables > span {color:#7b8497;}
 .v2-template-variables button {background:#fff;border:1px solid #e5e4e8;border-radius:16px;padding:5px 10px;font-size:12px;color:inherit;cursor:pointer;}
 .v2-template-variables button:disabled {opacity:.5;cursor:default;}
+
+/* Product polish: quiet surfaces, clear actions and short interaction cues. */
+.v2-shell, .v2-auth, .v2-onboarding {
+  --v2-accent: #d23e1c;
+  --v2-accent-hover: #bf3416;
+  --v2-accent-soft: #fff1e9;
+  --v2-border: #e3e8ef;
+  --v2-ink: #202b3d;
+  color: var(--v2-ink);
+  background: #f7f9fc;
+}
+.v2-shell button, .v2-auth button, .v2-onboarding button, .v2-button {
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.v2-shell button:not(:disabled):hover {filter:none;}
+.v2-shell button:not(:disabled):hover, .v2-auth button:not(:disabled):hover, .v2-onboarding button:not(:disabled):hover {
+  border-color:#cbd5e1;background-color:#f8fafc;
+}
+.v2-shell .v2-primary, .v2-auth .v2-primary, .v2-onboarding .v2-primary {
+  background:var(--v2-accent);border-color:var(--v2-accent);color:#fff;
+  box-shadow:0 3px 8px #d23e1c1a;
+}
+.v2-shell .v2-primary:not(:disabled):hover, .v2-auth .v2-primary:not(:disabled):hover, .v2-onboarding .v2-primary:not(:disabled):hover {
+  background:var(--v2-accent-hover);border-color:var(--v2-accent-hover);box-shadow:0 5px 12px #d23e1c26;transform:translateY(-1px);
+}
+.v2-shell button:not(:disabled):active, .v2-auth button:not(:disabled):active, .v2-onboarding button:not(:disabled):active {transform:translateY(0);box-shadow:none;}
+.v2-card {border-color:var(--v2-border,#e3e8ef);box-shadow:0 2px 8px #172b4d04,0 12px 28px #172b4d03;}
+.v2-card h1,.v2-card h2,.v2-header h1 {letter-spacing:-.025em;color:#182438;}
+.v2-muted,.v2-page-description,.v2-header p {color:#64748b;}
+.v2-sidebar {border-color:#e3e8ef;box-shadow:3px 0 18px #172b4d03;}
+.v2-brand {border-color:#edf1f6;}
+.v2-sidebar nav button {color:#536176;border-radius:10px;}
+.v2-sidebar nav button:not(.active):hover {background:#f0f4fa;color:#24344d;border-color:transparent;}
+.v2-sidebar nav button.active, .v2-sidebar nav button.active:hover {
+  background:var(--v2-accent-soft);color:#b73317;box-shadow:inset 3px 0 0 #f35c38;border-color:transparent;
+}
+.v2-sidebar nav button.active svg {color:#d23e1c;}
+.v2-header {border-color:#e3e8ef;box-shadow:0 2px 10px #172b4d03;background:rgba(255,255,255,.98);}
+.v2-shell input,.v2-shell select,.v2-auth input,.v2-onboarding input {background:#fff;border-color:#dce3ec;transition:border-color .16s,box-shadow .16s;}
+.v2-shell input:hover,.v2-shell select:hover,.v2-auth input:hover,.v2-onboarding input:hover {border-color:#b7c4d6;}
+.v2-shell input:focus-visible,.v2-shell select:focus-visible,.v2-auth input:focus-visible,.v2-onboarding input:focus-visible {border-color:#df684d;box-shadow:0 0 0 3px #ff653d12;}
+.v2-shell button:focus-visible,.v2-auth button:focus-visible,.v2-onboarding button:focus-visible,.v2-shell a:focus-visible {outline:2px solid #d23e1c;outline-offset:3px;}
+.v2-kpis .v2-card {border-top:2px solid #ff9c80;}
+.v2-kpis .v2-card:nth-child(3n+2) {border-top-color:#75cdb5;}
+.v2-kpis .v2-card:nth-child(3n) {border-top-color:#91b4ed;}
+.v2-kpis strong {color:#23344d;letter-spacing:-.04em;}
+.v2-status.connected,.v2-status.completed,.v2-status.active,.v2-status.delivered,.v2-status.read {background:#e4f7ef;color:#087352;}
+.v2-status.running {background:#fff0df;color:#9b4809;}
+.v2-notice,.v2-setup-banner {background:#fff6ef;border-color:#ffd8c3;}
+.v2-card th {background:#f5f8fc;color:#60718a;}
+.v2-card tbody tr {transition:background-color .14s ease;}
+.v2-card tbody tr:hover {background:#f8faff;}
+.v2-conversation {border-color:#e7ecf3;border-radius:10px;transition:background-color .16s,border-color .16s;}
+.v2-shell .v2-conversation.selected {background:#fff3ec;border-color:#ffc9b6;}
+.v2-shell .v2-conversation:not(.selected):hover {background:#f2f6fc;}
+.v2-thread {background:#f4f7fb;border:1px solid #e8edf4;}
+.v2-bubble.outbound {background:#fff1e7;border-color:#ffd9c4;}
+.v2-bubble.inbound {border-color:#e0e7f0;}
+.v2-bubble small,.v2-composer-count,.v2-composer-hint,.v2-progress-heading>span,.v2-attachment-content small {color:#65748a;}
+.v2-composer-box {border-color:#dce3ec;box-shadow:0 2px 5px #172b4d03;}
+.v2-composer-box:focus-within {border-color:#ec896a;box-shadow:0 0 0 3px #ff653d0f;}
+.v2-shell .v2-icon-button:hover {background:#fff1e9;color:#bf3416;border-color:transparent;}
+.v2-composer-menu {border-color:#e1e7ef;box-shadow:0 8px 28px #172b4d16;transform-origin:bottom left;animation:v2-menu-reveal .16s ease-out;}
+.v2-shell .v2-composer-menu button:hover {background:#fff1e9;color:#bf3416;border-color:transparent;}
+.v2-template-variables>span {color:#64748b;}
+.v2-shell .v2-template-variables button {background:#f5f8fc;color:#405675;border-color:#e1e8f1;font-weight:500;}
+.v2-shell .v2-template-variables button:hover:not(:disabled) {background:#fff1e9;border-color:#ffc7b3;color:#ac3015;}
+.v2-send-progress {background:#e9eef5;}
+.v2-send-progress>span {background:linear-gradient(90deg,#f7794f,#ef4c28);box-shadow:0 0 6px #ef4c281a;}
+.v2-send-progress.complete>span {background:linear-gradient(90deg,#23b58a,#10966e);}
+.v2-empty svg {color:#de6a48;background:#fff1e9;border-radius:12px;padding:8px;box-sizing:content-box;}
+@keyframes v2-surface-enter {from {opacity:.55;transform:translateY(5px);} to {opacity:1;transform:translateY(0);}}
+@keyframes v2-menu-reveal {from {opacity:0;transform:translateY(4px) scale(.98);} to {opacity:1;transform:translateY(0) scale(1);}}
+.v2-main main>.v2-card,.v2-main main>.v2-grid,.v2-main main>.v2-kpis {animation:v2-surface-enter .24s ease-out;}
+.v2-dialog {animation:v2-surface-enter .2s ease-out;}
+@media (prefers-reduced-motion:reduce) {
+  .v2-shell *, .v2-auth *, .v2-onboarding * {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
+  .v2-shell button:not(:disabled):hover,.v2-auth button:not(:disabled):hover,.v2-onboarding button:not(:disabled):hover {transform:none;}
+}
