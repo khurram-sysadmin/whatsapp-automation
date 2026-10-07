@@ -1047,3 +1047,8 @@ td {
 @media(prefers-reduced-motion:reduce){.v2-recording-dot{animation:none;}.v2-send-progress>span{transition:none;}}
 @media(max-width:600px){.v2-shell .v2-icon-button{width:44px;height:44px;min-height:44px;}.v2-shell .v2-composer-menu button{min-height:44px;}}
 .v2-message-attachment-label{display:block;font-size:11px;color:#8b8b96;margin-top:5px;}
+
+.v2-template-variables {display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:12px;}
+.v2-template-variables > span {color:#7b8497;}
+.v2-template-variables button {background:#fff;border:1px solid #e5e4e8;border-radius:16px;padding:5px 10px;font-size:12px;color:inherit;cursor:pointer;}
+.v2-template-variables button:disabled {opacity:.5;cursor:default;}

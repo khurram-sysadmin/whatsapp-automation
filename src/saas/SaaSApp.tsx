@@ -1659,7 +1659,7 @@ export default function SaaSApp() {
                         readOnly={Boolean(editingTemplate)}
                       />
                     </label>
-                    <MessageEditor disabled={busy} name="body" defaultValue={editingTemplate?.body || ""} media={templateMedia} onMediaChange={setTemplateMedia} />
+                    <MessageEditor variables disabled={busy} name="body" defaultValue={editingTemplate?.body || ""} media={templateMedia} onMediaChange={setTemplateMedia} />
                     <button className="v2-primary" disabled={busy}>
                       Save template
                     </button>

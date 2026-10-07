@@ -2,7 +2,7 @@ from pathlib import Path
 import base64,hashlib,json,re,zipfile
 root=Path(__file__).resolve().parents[1]
 dist=root/'dist'
-release=root.parent/'WhatsApp-Automation-Clean-Composer-Complete-2026-10-07-cPanel.zip'
+release=root.parent/'WhatsApp-Automation-Template-Variables-Complete-2026-10-07-cPanel.zip'
 files=[p for p in dist.rglob('*') if p.is_file() and (p.relative_to(dist).parts[0] in {'assets','third-party'} or p.relative_to(dist).as_posix() in {'index.html','.htaccess','favicon.svg','icons.svg','logo.jpg','lead-import-example.csv'})]
 assert any(p.name=='.htaccess' for p in files)
 required_services=['connect/wasender.php','connect/setup-core.php','webhooks/whatsapp.php']
