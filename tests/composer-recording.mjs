@@ -43,5 +43,6 @@ await act(async()=>templateRoot.render(React.createElement(MessageEditor,{variab
 document.querySelector('textarea').setSelectionRange(3,3);
 await click('First name');assert.equal(document.querySelector('textarea').value,'Hi {{first_name}}');
 await click('Company name');assert.equal(document.querySelector('textarea').value,'Hi {{first_name}}{{company}}');
+for(const [label,key] of [['Full name','name'],['Phone number','phone'],['Email','email'],['City','city'],['Industry','industry']]){await click(label);assert.ok(document.querySelector('textarea').value.endsWith('{{'+key+'}}'));}
 await act(async()=>templateRoot.unmount());
 console.log('PASS: attachment menu, recording stop/playback, blocked submit while capturing, discard, permission denial, late permission cancellation and microphone cleanup on unmount. No microphone or network used.');

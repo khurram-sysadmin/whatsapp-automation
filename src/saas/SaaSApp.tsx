@@ -276,7 +276,7 @@ function CampaignForm({
               </p>
             </>
           )}
-          <MessageEditor disabled={busy} value={template} onChange={setTemplate} media={media} onMediaChange={setMedia} />
+          <MessageEditor variables={!testSession} disabled={busy} value={template} onChange={setTemplate} media={media} onMediaChange={setMedia} />
           <div className="v2-form-grid">
             <Field
               name="Timezone"

@@ -14,13 +14,14 @@ const mediaRules = {
   audio:{label:'Audio',accept:'audio/aac,audio/mpeg,audio/ogg,audio/amr,.aac,.mp3,.ogg,.amr',max:16*1024*1024,icon:AudioLines},
   document:{label:'Document',accept:'.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt',max:100*1024*1024,icon:FileText},
 };
+const templateVariables = [['name','Full name'],['first_name','First name'],['company','Company name'],['phone','Phone number'],['email','Email'],['city','City'],['industry','Industry']] as const;
 type Kind = keyof typeof mediaRules;
 export function MessageEditor({value,defaultValue='',onChange,name,media,onMediaChange,compact=false,disabled=false,variables=false}:{value?:string;defaultValue?:string;onChange?:(value:string)=>void;name?:string;media?:MediaDraft;onMediaChange?:(media:MediaDraft)=>void;compact?:boolean;disabled?:boolean;variables?:boolean}) {
   const [local,setLocal]=useState(defaultValue),[menu,setMenu]=useState(false),[kind,setKind]=useState<Kind>('image'),[error,setError]=useState(''),[recording,setRecording]=useState(false),[processing,setProcessing]=useState(false),[seconds,setSeconds]=useState(0);
   const ref=useRef<HTMLTextAreaElement>(null),fileRef=useRef<HTMLInputElement>(null),root=useRef<HTMLDivElement>(null),recorder=useRef<MediaRecorder|null>(null),stream=useRef<MediaStream|null>(null),mounted=useRef(true),cancelled=useRef(false),active=useRef(false),generation=useRef(0),encoding=useRef<AbortController|null>(null),clock=useRef<ReturnType<typeof setInterval>|null>(null),hardStop=useRef<ReturnType<typeof setTimeout>|null>(null);
   const text=value??local;
   const change=(next:string)=>{setLocal(next);onChange?.(next);};
-  const insertVariable=(key:'first_name'|'company')=>{
+  const insertVariable=(key:typeof templateVariables[number][0])=>{
     const input=ref.current,start=input?.selectionStart??text.length,end=input?.selectionEnd??text.length,token='{{'+key+'}}';
     if(disabled||active.current||text.length-(end-start)+token.length>4096)return;
     change(text.slice(0,start)+token+text.slice(end));
@@ -112,7 +113,7 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
         <span className="v2-composer-count">{text.length?`${text.length.toLocaleString()} / 4,096`:''}</span>
       </div>
     </div>
-    {variables&&<div className="v2-template-variables" aria-label="Template variables"><span>Insert variable</span><button type="button" disabled={locked} onClick={()=>insertVariable('first_name')}>First name</button><button type="button" disabled={locked} onClick={()=>insertVariable('company')}>Company name</button></div>}
+    {variables&&<div className="v2-template-variables" aria-label="Message variables"><span>Insert variable</span>{templateVariables.map(([key,label])=><button key={key} type="button" disabled={locked} onClick={()=>insertVariable(key)}>{label}</button>)}</div>}
     {menu&&<div className="v2-composer-menu" aria-label="Message options menu">
       {onMediaChange&&(Object.keys(mediaRules) as Kind[]).map(type=>{const Icon=mediaRules[type].icon;return <button type="button" key={type} onClick={()=>chooseFile(type)}><Icon size={17}/>{mediaRules[type].label}</button>;})}
     </div>}
