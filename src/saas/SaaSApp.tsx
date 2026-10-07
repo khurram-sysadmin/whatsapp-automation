@@ -38,6 +38,7 @@ import { MessageEditor, mediaDraftFromRow, type MediaDraft } from "./MessageEdit
 import { MediaPreview } from "./MediaPreview";
 import { CampaignProgress } from "./CampaignProgress";
 import { useDialogFocus } from "./dialogFocus";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { AddWorkspaceDialog } from "./AddWorkspaceDialog";
 import { InboxLayout, ContactAvatar, contactName } from "./InboxLayout";
 import { AutomaticConnection } from "./AutomaticConnection";
@@ -934,20 +935,7 @@ export default function SaaSApp() {
           </button>
         </div>
         <div className="v2-workspace">
-          <label className="v2-field">
-            Company
-            <select
-              value={workspaceId}
-              onChange={(e) => setWorkspace(e.target.value)}
-            >
-              {rows(bootstrap.workspaces).map((w) => (
-                <option key={w.workspaceId} value={w.workspaceId}>
-                  {w.companyName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="v2-add-workspace" type="button" disabled={busy} onClick={()=>setAddingWorkspace(true)}><Plus size={14}/> Add workspace</button>
+          <WorkspaceSwitcher workspaces={rows(bootstrap.workspaces)} value={workspaceId} disabled={busy} onSelect={setWorkspace} onAdd={()=>setAddingWorkspace(true)}/>
         </div>
         <nav aria-label="Main navigation">
           {navigation.map((n) => {
