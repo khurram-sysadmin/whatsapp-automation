@@ -1131,3 +1131,6 @@ td {
   .v2-shell *, .v2-auth *, .v2-onboarding * {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
   .v2-shell button:not(:disabled):hover,.v2-auth button:not(:disabled):hover,.v2-onboarding button:not(:disabled):hover {transform:none;}
 }
+
+.v2-shell .v2-template-delete {color:#b42318;background:#fff;border-color:#f0d5d1;}
+.v2-shell .v2-template-delete:hover:not(:disabled) {color:#981b13;background:#fff1ef;border-color:#e8aaa2;}

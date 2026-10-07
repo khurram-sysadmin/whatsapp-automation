@@ -79,6 +79,7 @@ const writes = new Set([
   "stop",
   "delete",
   "saveTemplate",
+  "deleteTemplate",
   "suppress",
   "reply",
   "markConversationRead",

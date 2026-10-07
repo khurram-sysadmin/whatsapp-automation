@@ -28,7 +28,6 @@ import {
   MessageSquare,
   FileText,
   ChartNoAxesCombined,
-  UserRound,
   CreditCard,
   Settings,
   Inbox,
@@ -338,7 +337,6 @@ const navigation = [
   "WhatsApp Accounts",
   "Templates",
   "Analytics",
-  "Team",
   "Billing",
   "Settings",
 ] as const;
@@ -375,10 +373,6 @@ const pageDetails: Record<
   Analytics: {
     icon: ChartNoAxesCombined,
     description: "Track sending, delivery and customer responses.",
-  },
-  Team: {
-    icon: UserRound,
-    description: "Manage access to your company account.",
   },
   Billing: {
     icon: CreditCard,
@@ -1672,14 +1666,16 @@ export default function SaaSApp() {
                     <h3>{t.name}</h3>
                     <p className="v2-prewrap">{t.body}</p>
                     {t.mediaUrl && <MediaPreview url={t.mediaUrl} type={t.mediaType} filename={t.mediaFilename} />}
-                    {canWrite && (
-                      <button
-                        disabled={busy}
-                        onClick={() => setEditingTemplate(t)}
-                      >
-                        Edit template
-                      </button>
-                    )}
+                    {canWrite && <div className="v2-actions">
+                      <button disabled={busy} onClick={() => setEditingTemplate(t)}>Edit template</button>
+                      <button disabled={busy} className="v2-template-delete" onClick={() => {
+                        if (!confirm('Delete "' + t.name + '"? Existing campaigns will keep their messages.')) return;
+                        void perform(async () => {
+                          await action("deleteTemplate", workspaceId, { templateId: t.templateId });
+                          if (editingTemplate?.templateId === t.templateId) setEditingTemplate(null);
+                        });
+                      }}>Delete template</button>
+                    </div>}
                   </section>
                 ))}
               </div>
@@ -1720,19 +1716,6 @@ export default function SaaSApp() {
               <p>{count(usage.messagesSent)} messages sent this month.</p>
               <p className="v2-muted">
                 Paid checkout will appear here after the test payment provider is selected and configured.
-              </p>
-            </section>
-          )}
-          {page === "Team" && (
-            <section className="v2-card">
-              <h2>Team access</h2>
-              <p>
-                {bootstrap.user?.fullName || bootstrap.user?.email} ·{" "}
-                {displayStatus(workspace?.role)}
-              </p>
-              <p className="v2-muted">
-                To invite a colleague or change their access, contact EightBit
-                support.
               </p>
             </section>
           )}
@@ -1856,9 +1839,9 @@ export default function SaaSApp() {
               </section>
               <section className="v2-card">
                 <h2>Workspace</h2>
-                <p>Manage your numbers, team and subscription.</p>
+                <p>Manage your numbers and subscription.</p>
                 <div className="v2-actions">
-                  {(["WhatsApp Accounts", "Team", "Billing"] as Page[]).map(
+                  {(["WhatsApp Accounts", "Billing"] as Page[]).map(
                     (p) => (
                       <button key={p} onClick={() => navigate(p)}>
                         {p}
