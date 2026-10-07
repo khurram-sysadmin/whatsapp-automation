@@ -37,6 +37,7 @@ import "./saas.css";
 import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
 import { MessageEditor, type MediaDraft } from "./MessageEditor";
 import { MediaPreview } from "./MediaPreview";
+import { CampaignProgress } from "./CampaignProgress";
 import { AutomaticConnection } from "./AutomaticConnection";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
   return (
@@ -1325,6 +1326,7 @@ export default function SaaSApp() {
                     </div>
                   </div>
                   <p>{detail.campaign?.template}</p>
+                  {detail.campaign?.mediaUrl && <MediaPreview url={detail.campaign.mediaUrl} type={detail.campaign.mediaType} filename={detail.campaign.mediaFilename} />}
                   <p className="v2-muted">
                     {detail.campaign?.timezone} ·{" "}
                     {detail.campaign?.sendingStartTime}–
@@ -1349,13 +1351,7 @@ export default function SaaSApp() {
                       />
                     </label>
                   )}
-                  <div className="v2-actions">
-                    {Object.entries(detail.stats || {}).map(([k, v]) => (
-                      <span key={k}>
-                        {displayStatus(k)}: {count(v)}
-                      </span>
-                    ))}
-                  </div>
+                  <CampaignProgress stats={detail.stats || {}} status={detail.campaign?.status || "draft"} />
                   <h3>Messages</h3>
                   <div className="v2-table-wrap">
                     <table>
@@ -1370,9 +1366,9 @@ export default function SaaSApp() {
                         {rows(detail.messages).map((m) => (
                           <tr key={m.messageId}>
                             <td>{m.phoneE164}</td>
-                            <td>{m.personalizedMessage}</td>
+                            <td>{m.personalizedMessage}{m.mediaType && <small className="v2-message-attachment-label">{m.mediaType === 'audio' ? 'Voice note' : m.mediaFilename || 'Attachment'}</small>}</td>
                             <td>
-                              {displayStatus(m.status)}
+                              {['sent','delivered','read'].includes(m.status) ? 'Sent' : ['queued','leased','dispatching'].includes(m.status) ? 'Queued' : displayStatus(m.status)}
                               {m.error && <p className="v2-error">{m.error}</p>}
                             </td>
                           </tr>
@@ -1572,7 +1568,7 @@ export default function SaaSApp() {
                     {canWrite && (
                       <form
                         key={conversationId}
-                        className="v2-actions"
+                        className="v2-reply-form"
                         onSubmit={(e) => {
                           e.preventDefault();
                           const form = e.currentTarget;
@@ -1597,7 +1593,7 @@ export default function SaaSApp() {
                           });
                         }}
                       >
-                        <MessageEditor media={replyMedia} onMediaChange={setReplyMedia} name="text" />
+                        <MessageEditor compact disabled={busy} media={replyMedia} onMediaChange={setReplyMedia} name="text" />
                         <button className="v2-primary" disabled={busy}>
                           Send reply
                         </button>

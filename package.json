@@ -13,9 +13,11 @@
     "test:v2-foundation": "node tests/v2-foundation.mjs",
     "test:v2-runtime": "node tests/v2-runtime.mjs",
     "test:v2-workflow": "node tests/v2-workflow.mjs",
-    "test:v2-frontend": "node tests/v2-frontend.mjs"
+    "test:v2-frontend": "node tests/v2-frontend.mjs",
+    "test:composer": "node tests/composer-progress.mjs && node tests/composer-recording.mjs"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@supabase/supabase-js": "^2.117.2",
     "@types/papaparse": "^5.5.2",
     "autoprefixer": "^10.6.1",
@@ -35,6 +37,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^30.1.2",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"

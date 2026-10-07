@@ -1,72 +1,119 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
+import { MoreHorizontal, Mic, Square, Image, Video, FileText, AudioLines, UserRound, Eye, X, Paperclip } from 'lucide-react';
+import { MAX_RECORDING_SECONDS, recordingToFile } from './voiceRecording';
 
-const fields = [
-  ["first_name", "First name"], ["company", "Company"], ["name", "Full name"],
-  ["phone", "Phone"], ["email", "Email"], ["city", "City"], ["industry", "Industry"],
-];
+const fields = [['first_name','First name'],['company','Company'],['name','Full name'],['phone','Phone'],['email','Email'],['city','City'],['industry','Industry']];
 const examples = [
-  { name: "Khurram Ahmed", first_name: "Khurram", company: "ITB Solutions", phone: "+12025550101", email: "khurram@example.com", city: "Karachi", industry: "Technology" },
-  { name: "Ali Khan", first_name: "Ali", company: "Sysnova Solutions", phone: "+12025550102", email: "ali@example.com", city: "Lahore", industry: "Technology" },
+  {name:'Khurram Ahmed',first_name:'Khurram',company:'ITB Solutions',phone:'+12025550101',email:'khurram@example.com',city:'Karachi',industry:'Technology'},
+  {name:'Ali Khan',first_name:'Ali',company:'Sysnova Solutions',phone:'+12025550102',email:'ali@example.com',city:'Lahore',industry:'Technology'},
 ];
-export type MediaDraft = { type: "image" | "video" | "audio" | "document"; url: string; mime: string; filename: string; size: number; file?: File } | null;
+export type MediaDraft = {type:'image'|'video'|'audio'|'document';url:string;mime:string;filename:string;size:number;file?:File}|null;
 const mediaRules = {
-  image: { label: "Image", accept: "image/jpeg,image/png", max: 5 * 1024 * 1024 },
-  video: { label: "Video", accept: "video/mp4,video/3gpp", max: 50 * 1024 * 1024 },
-  audio: { label: "Voice note", accept: "audio/aac,audio/mpeg,audio/ogg,audio/amr,.aac,.mp3,.ogg,.amr", max: 16 * 1024 * 1024 },
-  document: { label: "Document", accept: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt", max: 100 * 1024 * 1024 },
-} as const;
-export function MessageEditor({ value, defaultValue = "", onChange, name, media, onMediaChange }: { value?: string; defaultValue?: string; onChange?: (value: string) => void; name?: string; media?: MediaDraft; onMediaChange?: (media: MediaDraft) => void }) {
-  const [local, setLocal] = useState(defaultValue);
-  const [sample, setSample] = useState(0);
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    const form = ref.current?.form;
-    const reset = () => { if (value === undefined) setLocal(defaultValue); };
-    form?.addEventListener("reset", reset);
-    return () => form?.removeEventListener("reset", reset);
-  }, [defaultValue, value]);
-  const text = value ?? local;
-  const change = (next: string) => { setLocal(next); onChange?.(next); };
-  const insert = (key: string) => {
-    const input = ref.current;
-    const start = input?.selectionStart ?? text.length;
-    const end = input?.selectionEnd ?? text.length;
-    const token = "{{" + key + "}}";
-    if (text.length - (end - start) + token.length > 4096) return;
-    change(text.slice(0, start) + token + text.slice(end));
-    requestAnimationFrame(() => { input?.focus(); input?.setSelectionRange(start + token.length, start + token.length); });
+  image:{label:'Image',accept:'image/jpeg,image/png',max:5*1024*1024,icon:Image},
+  video:{label:'Video',accept:'video/mp4,video/3gpp',max:50*1024*1024,icon:Video},
+  audio:{label:'Audio file',accept:'audio/aac,audio/mpeg,audio/ogg,audio/amr,.aac,.mp3,.ogg,.amr',max:16*1024*1024,icon:AudioLines},
+  document:{label:'Document',accept:'.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt',max:100*1024*1024,icon:FileText},
+};
+type Kind = keyof typeof mediaRules;
+export function MessageEditor({value,defaultValue='',onChange,name,media,onMediaChange,compact=false,disabled=false}:{value?:string;defaultValue?:string;onChange?:(value:string)=>void;name?:string;media?:MediaDraft;onMediaChange?:(media:MediaDraft)=>void;compact?:boolean;disabled?:boolean}) {
+  const [local,setLocal]=useState(defaultValue),[sample,setSample]=useState(0),[menu,setMenu]=useState(false),[panel,setPanel]=useState<'fields'|'preview'|null>(null),[kind,setKind]=useState<Kind>('image'),[error,setError]=useState(''),[recording,setRecording]=useState(false),[processing,setProcessing]=useState(false),[seconds,setSeconds]=useState(0);
+  const ref=useRef<HTMLTextAreaElement>(null),fileRef=useRef<HTMLInputElement>(null),root=useRef<HTMLDivElement>(null),recorder=useRef<MediaRecorder|null>(null),stream=useRef<MediaStream|null>(null),mounted=useRef(true),cancelled=useRef(false),active=useRef(false),generation=useRef(0),encoding=useRef<AbortController|null>(null),clock=useRef<ReturnType<typeof setInterval>|null>(null),hardStop=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const text=value??local;
+  const change=(next:string)=>{setLocal(next);onChange?.(next);};
+  const cleanup=()=>{
+    if(clock.current)clearInterval(clock.current);
+    if(hardStop.current)clearTimeout(hardStop.current);
+    stream.current?.getTracks().forEach(track=>track.stop());stream.current=null;
   };
-  const preview = text.replace(/\{\{([a-z_]+)\}\}/g, (token, key) => (examples[sample] as Record<string, string>)[key] ?? token);
-  const [kind, setKind] = useState<keyof typeof mediaRules | "text">(media?.type || "text");
-  const [mediaError, setMediaError] = useState("");
-  useEffect(() => { if (media) setKind(media.type); }, [media]);
-  useEffect(() => () => { if (media?.url.startsWith("blob:")) URL.revokeObjectURL(media.url); }, [media?.url]);
-  const selectKind = (next: typeof kind) => { if (next !== kind) onMediaChange?.(null); setKind(next); setMediaError(""); };
-  const pickMedia = (file: File | undefined) => {
-    if (!file) return;
-    const rule = mediaRules[kind as keyof typeof mediaRules];
-    if (!rule) return;
-    if (file.size > rule.max) { setMediaError(`${rule.label} files must be ${Math.round(rule.max / 1024 / 1024)} MB or smaller.`); return; }
-    const extensions = { image: /\.(jpe?g|png)$/i, video: /\.(mp4|3gp)$/i, audio: /\.(aac|mp3|ogg|amr)$/i, document: /\.(pdf|docx?|xlsx?|pptx?|txt)$/i };
-    if (!file.size || !extensions[kind as keyof typeof extensions].test(file.name) || (kind !== "document" && file.type && !rule.accept.split(",").includes(file.type))) { setMediaError(`Choose a supported ${rule.label.toLowerCase()} file using the formats shown below.`); return; }
-    setMediaError("");
-    const url = URL.createObjectURL(file);
-    onMediaChange?.({ type: kind as "image" | "video" | "audio" | "document", url, mime: file.type, filename: file.name, size: file.size, file });
+  useEffect(()=>{
+    mounted.current=true;
+    return()=>{mounted.current=false;encoding.current?.abort();generation.current++;cancelled.current=true;if(recorder.current?.state==='recording')recorder.current.stop();cleanup();};
+  },[]);
+  useEffect(()=>()=>{if(media?.url.startsWith('blob:'))URL.revokeObjectURL(media.url);},[media?.url]);
+  useEffect(()=>{
+    const form=ref.current?.form;
+    const reset=()=>{if(value===undefined)setLocal(defaultValue);setPanel(null);setMenu(false);};
+    form?.addEventListener('reset',reset);
+    const block=(event:Event)=>{if(active.current){event.preventDefault();event.stopImmediatePropagation();setError('Finish or discard your recording before sending.');}};
+    form?.addEventListener('submit',block,true);
+    return()=>{form?.removeEventListener('reset',reset);form?.removeEventListener('submit',block,true);};
+  },[defaultValue,value]);
+  useEffect(()=>{
+    const outside=(event:PointerEvent)=>{if(root.current&&!root.current.contains(event.target as Node))setMenu(false);};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setMenu(false);setPanel(null);}};
+    document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
+  },[]);
+  const insert=(key:string)=>{
+    const input=ref.current,start=input?.selectionStart??text.length,end=input?.selectionEnd??text.length,token='{{'+key+'}}';
+    if(text.length-(end-start)+token.length>4096)return;
+    change(text.slice(0,start)+token+text.slice(end));
+    requestAnimationFrame(()=>{input?.focus();input?.setSelectionRange(start+token.length,start+token.length);});
   };
-  return <div className="v2-message-editor">
-    <div className="v2-actions" aria-label="Message type"><button type="button" aria-pressed={kind === "text"} className={kind === "text" ? "v2-primary" : ""} onClick={() => selectKind("text")}>Text</button>{(Object.keys(mediaRules) as Array<keyof typeof mediaRules>).map(key => <button type="button" key={key} aria-pressed={kind === key} className={kind === key ? "v2-primary" : ""} onClick={() => selectKind(key)}>{mediaRules[key].label}</button>)}</div>
-    {kind !== "text" && <div className="v2-attachment-picker"><label className="v2-field">Attach {mediaRules[kind].label.toLowerCase()}<input key={kind} type="file" accept={mediaRules[kind].accept} onChange={e => { pickMedia(e.target.files?.[0]); e.target.value = ""; }} /></label><p className="v2-muted">{kind === "audio" ? "AAC, MP3, OGG or AMR · Delivered as a WhatsApp voice note" : kind === "image" ? "JPG or PNG" : kind === "video" ? "MP4 or 3GP" : "PDF, Word, Excel, PowerPoint or TXT"} · Up to {mediaRules[kind].max / 1024 / 1024} MB</p></div>}
-    {media && <div className="v2-selected-attachment"><div><strong>{media.filename}</strong><span className="v2-muted">{(media.size / 1024 / 1024).toFixed(1)} MB · {mediaRules[media.type].label}</span></div><button type="button" onClick={() => onMediaChange?.(null)} aria-label="Remove attachment">Remove</button></div>}
-    {mediaError && <p className="v2-error" role="alert">{mediaError}</p>}
-    <label className="v2-field">Message<textarea ref={ref} name={name} value={text} onChange={e => change(e.target.value)} required={!media} maxLength={4096} rows={5} placeholder="Hi {{first_name}}, I saw your company, {{company}}…" /></label>
-    <p className="v2-muted">Personalize your message. Click a field to insert it where you’re typing.</p>
-    <div className="v2-actions" aria-label="Insert a contact field">{fields.map(([key, title]) => <button type="button" key={key} onClick={() => insert(key)}>+ {title}</button>)}</div>
-    <p className="v2-muted">Each lead’s spreadsheet supplies these values. Use columns such as first_name and company. Missing values become blank; check your leads before starting.</p>
-    <section className="v2-message-preview" aria-label="Example message preview">
-      <label className="v2-field">Example preview<select value={sample} onChange={e => setSample(Number(e.target.value))}>{examples.map((contact, index) => <option key={contact.name} value={index}>{contact.first_name} · {contact.company}</option>)}</select></label>
-      {media && <><p className="v2-muted">Attachment ready: {media.filename}</p>{media.type === "image" && <img className="v2-media-preview" src={media.url} alt={media.filename} />}{media.type === "video" && <video className="v2-media-preview" src={media.url} controls preload="metadata" />}{media.type === "audio" && <audio src={media.url} controls preload="metadata" />}</>}
-      <p className="v2-prewrap">{preview || (media ? "Add an optional caption…" : "Your personalized message will appear here.")}</p>
-      <small className="v2-muted">Illustrative contacts only. Actual messages use your imported lead data.</small>
-    </section>
+  const pickMedia=(file:File|undefined,type:Kind=kind)=>{
+    if(!file)return;
+    const rule=mediaRules[type];
+    const extensions={image:/\.(jpe?g|png)$/i,video:/\.(mp4|3gp)$/i,audio:/\.(aac|mp3|ogg|amr)$/i,document:/\.(pdf|docx?|xlsx?|pptx?|txt)$/i};
+    if(file.size>rule.max){setError(`${rule.label} files must be ${rule.max/1024/1024} MB or smaller.`);return;}
+    if(!file.size||!extensions[type].test(file.name)||(type!=='document'&&file.type&&!rule.accept.split(',').includes(file.type))){setError(`Choose a supported ${rule.label.toLowerCase()} file.`);return;}
+    setError('');setPanel(null);
+    onMediaChange?.({type,url:URL.createObjectURL(file),mime:file.type,filename:file.name,size:file.size,file});
+  };
+  const chooseFile=(next:Kind)=>{setKind(next);setMenu(false);setError('');requestAnimationFrame(()=>fileRef.current?.click());};
+  const startRecording=async()=>{
+    if(active.current||disabled)return;
+    const recordingId=++generation.current;const controller=new AbortController();encoding.current=controller;active.current=true;cancelled.current=false;setError('');setMenu(false);setProcessing(true);setSeconds(0);
+    try{
+      if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined')throw Error('Recording is unavailable in this browser. You can attach an audio file instead.');
+      const input=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}});
+      if(!mounted.current||recordingId!==generation.current){input.getTracks().forEach(track=>track.stop());return;}
+      stream.current=input;
+      const mime=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'].find(type=>MediaRecorder.isTypeSupported(type));
+      const capture=new MediaRecorder(input,mime?{mimeType:mime}:undefined);recorder.current=capture;
+      const chunks:Blob[]=[];
+      capture.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
+      capture.onerror=()=>{if(recordingId!==generation.current)return;generation.current++;cancelled.current=true;cleanup();active.current=false;if(mounted.current){setRecording(false);setProcessing(false);setError('Recording was interrupted. Please try again.');}};
+      capture.onstop=async()=>{
+        if(recordingId!==generation.current)return;
+        cleanup();if(mounted.current)setRecording(false);
+        try{
+          if(cancelled.current||!mounted.current)return;
+          setProcessing(true);
+          const file=await recordingToFile(new Blob(chunks,{type:capture.mimeType}),controller.signal);
+          if(recordingId===generation.current&&!cancelled.current&&mounted.current)pickMedia(file,'audio');
+        }catch{if(recordingId===generation.current&&mounted.current&&!cancelled.current)setError('Your recording could not be prepared. Try again or attach an audio file.');}
+        finally{chunks.length=0;if(recorder.current===capture)recorder.current=null;if(recordingId===generation.current){active.current=false;if(mounted.current)setProcessing(false);}}
+      };
+      capture.start(1000);setProcessing(false);setRecording(true);
+      clock.current=setInterval(()=>setSeconds(current=>current+1),1000);
+      hardStop.current=setTimeout(()=>{if(capture.state==='recording')capture.stop();},MAX_RECORDING_SECONDS*1000);
+    }catch(reason){if(recordingId!==generation.current)return;cleanup();active.current=false;if(mounted.current){setProcessing(false);setRecording(false);setError(reason instanceof DOMException&&reason.name==='NotAllowedError'?'Microphone access was denied. Allow it in your browser or attach an audio file.':reason instanceof Error?reason.message:'Unable to access your microphone.');}}
+  };
+  const discard=()=>{encoding.current?.abort();generation.current++;cancelled.current=true;if(recorder.current?.state==='recording')recorder.current.stop();recorder.current=null;cleanup();active.current=false;setRecording(false);setProcessing(false);};
+  const preview=text.replace(/\{\{([a-z_]+)\}\}/g,(token,key)=>(examples[sample] as Record<string,string>)[key]??token);
+  const locked=disabled||recording||processing;
+  return <div ref={root} className={'v2-message-editor v2-composer'+(compact?' compact':'')}>
+    <div className="v2-composer-box">
+      <textarea aria-label="Message" ref={ref} name={name} value={text} onChange={event=>change(event.target.value)} required={!media} maxLength={4096} rows={compact?2:4} placeholder={compact?'Write a message…':'Write your campaign message…'} disabled={locked}/>
+      <div className="v2-composer-toolbar">
+        <div className="v2-composer-tools">
+          <button type="button" className="v2-icon-button" aria-label="Message options" aria-expanded={menu} title="Attachments and personalization" disabled={locked} onClick={()=>setMenu(current=>!current)}><MoreHorizontal size={20}/></button>
+          {onMediaChange&&<button type="button" className="v2-icon-button" aria-label="Record audio" title="Record audio" disabled={locked} onClick={()=>void startRecording()}><Mic size={18}/></button>}
+          {media&&<span className="v2-composer-hint"><Paperclip size={13}/> Attachment ready</span>}
+        </div>
+        <span className="v2-composer-count">{text.length?`${text.length.toLocaleString()} / 4,096`:''}</span>
+      </div>
+    </div>
+    {menu&&<div className="v2-composer-menu" aria-label="Message options menu">
+      {onMediaChange&&(Object.keys(mediaRules) as Kind[]).map(type=>{const Icon=mediaRules[type].icon;return <button type="button" key={type} onClick={()=>chooseFile(type)}><Icon size={17}/>{mediaRules[type].label}</button>;})}
+      {onMediaChange&&<button type="button" onClick={()=>void startRecording()}><Mic size={17}/>Record audio</button>}
+      <button type="button" onClick={()=>{setPanel('fields');setMenu(false);}}><UserRound size={17}/>Personalize message</button>
+      <button type="button" onClick={()=>{setPanel('preview');setMenu(false);}}><Eye size={17}/>Preview message</button>
+    </div>}
+    {onMediaChange&&<input ref={fileRef} className="v2-hidden-file" type="file" accept={mediaRules[kind].accept} aria-label="Attach file" onChange={event=>{pickMedia(event.target.files?.[0]);event.target.value='';}}/>}
+    {(recording||processing)&&<div className="v2-recording" role="status"><span className={recording?'v2-recording-dot':''}/><strong>{recording?`Recording ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`:'Preparing voice note…'}</strong>{recording&&<button type="button" onClick={()=>recorder.current?.stop()}><Square size={13}/> Stop</button>}<button type="button" aria-label="Discard recording" onClick={discard}><X size={16}/></button></div>}
+    {media&&<div className="v2-composer-attachment"><div className="v2-attachment-content">{media.type==='image'?<img src={media.url} alt={media.filename}/>:media.type==='video'?<video src={media.url} controls preload="metadata"/>:media.type==='audio'?<audio src={media.url} controls preload="metadata"/>:<FileText size={26}/>}<span><strong>{media.filename}</strong><small>{(media.size/1024/1024).toFixed(1)} MB</small></span></div><button type="button" className="v2-icon-button" disabled={locked} aria-label="Remove attachment" onClick={()=>onMediaChange?.(null)}><X size={16}/></button></div>}
+    {panel&&<section className="v2-composer-panel"><div className="v2-section-head"><strong>{panel==='fields'?'Personalize message':'Message preview'}</strong><button type="button" className="v2-icon-button" aria-label="Close message panel" onClick={()=>setPanel(null)}><X size={16}/></button></div>{panel==='fields'?<><p className="v2-muted">Insert a field from your contacts.</p><div className="v2-field-chips">{fields.map(([key,title])=><button type="button" key={key} onClick={()=>insert(key)}>{title}</button>)}</div><small className="v2-muted">Use matching spreadsheet columns. Missing values appear blank.</small></>:<><select aria-label="Preview contact" value={sample} onChange={event=>setSample(Number(event.target.value))}>{examples.map((contact,index)=><option key={contact.name} value={index}>{contact.first_name} · {contact.company}</option>)}</select><p className="v2-prewrap">{preview||(media?'Attachment only':'Write a message to preview it.')}</p><small className="v2-muted">Sample contact. Sending uses your imported leads.</small></>}</section>}
+    {error&&<p className="v2-error" role="alert">{error}</p>}
   </div>;
 }
