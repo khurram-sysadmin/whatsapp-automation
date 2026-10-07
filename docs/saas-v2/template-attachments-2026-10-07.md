@@ -10,7 +10,7 @@ Applied live migration backend/supabase/v2-review/013-template-media.sql to Supa
 
 The migration patches only the template branches of outreach_v2.api_v2 and saves its prior definition under release 2026-10-07-template-media. Writes reuse validate_media_v2 to check actual private storage objects, workspace prefix, MIME, size and filename. Existing authenticated membership/role checks and idempotency remain intact. Helper function is not exposed to browser/public roles. No sender schedules, subscriptions, client messages or active campaign state were changed. n8n already forwards these fields to the verified-user API and needs no additional publication.
 
-Live readiness result: template_api_ready=true, template_media_columns=5, template_validation_ready=true. Screenshot: release-local/template-backend-ready.png.
+Live readiness result: template_api_ready=true, template_media_columns=5, template_validation_ready=true. A second live comparison against the saved API definition returned other_api_logic_preserved=true outside the template branches. Screenshot: release-local/template-backend-ready.png.
 
 ## Verification
 PGlite contract tests passed for all four media types in saved templates, reload, campaign/queue reuse, clearing metadata, viewer write rejection, cross-company attachment rejection and independent company template lists. Migration was applied twice in fixtures to verify idempotency. Existing media, frontend and lifecycle regressions passed. Composer tests cover screenshot paste, saved row conversion and recording safeguards; actual browser screenshot paste added clipboard.png. Build passed. No customer microphone data or external WhatsApp messages were used.
