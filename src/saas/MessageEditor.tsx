@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState, type ClipboardEvent } from 'react';
-import { MoreHorizontal, Mic, Square, Image, Video, FileText, AudioLines, UserRound, Eye, X, Paperclip } from 'lucide-react';
+import { MoreHorizontal, Mic, Square, Image, Video, FileText, AudioLines, X, Paperclip } from 'lucide-react';
 import { MAX_RECORDING_SECONDS, recordingToFile } from './voiceRecording';
 import { MediaPreview } from './MediaPreview';
 
-const fields = [['first_name','First name'],['company','Company'],['name','Full name'],['phone','Phone'],['email','Email'],['city','City'],['industry','Industry']];
-const examples = [
-  {name:'Khurram Ahmed',first_name:'Khurram',company:'ITB Solutions',phone:'+12025550101',email:'khurram@example.com',city:'Karachi',industry:'Technology'},
-  {name:'Ali Khan',first_name:'Ali',company:'Sysnova Solutions',phone:'+12025550102',email:'ali@example.com',city:'Lahore',industry:'Technology'},
-];
 export type MediaDraft = {type:'image'|'video'|'audio'|'document';url:string;mime:string;filename:string;size:number;file?:File}|null;
 export function mediaDraftFromRow(row?: Record<string, unknown> | null): MediaDraft {
   if (!row || !['image','video','audio','document'].includes(String(row.mediaType)) || typeof row.mediaUrl !== 'string' || !row.mediaUrl) return null;
@@ -21,7 +16,7 @@ const mediaRules = {
 };
 type Kind = keyof typeof mediaRules;
 export function MessageEditor({value,defaultValue='',onChange,name,media,onMediaChange,compact=false,disabled=false}:{value?:string;defaultValue?:string;onChange?:(value:string)=>void;name?:string;media?:MediaDraft;onMediaChange?:(media:MediaDraft)=>void;compact?:boolean;disabled?:boolean}) {
-  const [local,setLocal]=useState(defaultValue),[sample,setSample]=useState(0),[menu,setMenu]=useState(false),[panel,setPanel]=useState<'fields'|'preview'|null>(null),[kind,setKind]=useState<Kind>('image'),[error,setError]=useState(''),[recording,setRecording]=useState(false),[processing,setProcessing]=useState(false),[seconds,setSeconds]=useState(0);
+  const [local,setLocal]=useState(defaultValue),[menu,setMenu]=useState(false),[kind,setKind]=useState<Kind>('image'),[error,setError]=useState(''),[recording,setRecording]=useState(false),[processing,setProcessing]=useState(false),[seconds,setSeconds]=useState(0);
   const ref=useRef<HTMLTextAreaElement>(null),fileRef=useRef<HTMLInputElement>(null),root=useRef<HTMLDivElement>(null),recorder=useRef<MediaRecorder|null>(null),stream=useRef<MediaStream|null>(null),mounted=useRef(true),cancelled=useRef(false),active=useRef(false),generation=useRef(0),encoding=useRef<AbortController|null>(null),clock=useRef<ReturnType<typeof setInterval>|null>(null),hardStop=useRef<ReturnType<typeof setTimeout>|null>(null);
   const text=value??local;
   const change=(next:string)=>{setLocal(next);onChange?.(next);};
@@ -37,7 +32,7 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
   useEffect(()=>()=>{if(media?.url.startsWith('blob:'))URL.revokeObjectURL(media.url);},[media?.url]);
   useEffect(()=>{
     const form=ref.current?.form;
-    const reset=()=>{if(value===undefined)setLocal(defaultValue);setPanel(null);setMenu(false);};
+    const reset=()=>{if(value===undefined)setLocal(defaultValue);setMenu(false);};
     form?.addEventListener('reset',reset);
     const block=(event:Event)=>{if(active.current){event.preventDefault();event.stopImmediatePropagation();setError('Finish or discard your recording before sending.');}};
     form?.addEventListener('submit',block,true);
@@ -45,23 +40,17 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
   },[defaultValue,value]);
   useEffect(()=>{
     const outside=(event:PointerEvent)=>{if(root.current&&!root.current.contains(event.target as Node))setMenu(false);};
-    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setMenu(false);setPanel(null);}};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setMenu(false);}};
     document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
     return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
   },[]);
-  const insert=(key:string)=>{
-    const input=ref.current,start=input?.selectionStart??text.length,end=input?.selectionEnd??text.length,token='{{'+key+'}}';
-    if(text.length-(end-start)+token.length>4096)return;
-    change(text.slice(0,start)+token+text.slice(end));
-    requestAnimationFrame(()=>{input?.focus();input?.setSelectionRange(start+token.length,start+token.length);});
-  };
   const pickMedia=(file:File|undefined,type:Kind=kind)=>{
     if(!file)return;
     const rule=mediaRules[type];
     const extensions={image:/\.(jpe?g|png)$/i,video:/\.(mp4|3gp)$/i,audio:/\.(aac|mp3|ogg|amr)$/i,document:/\.(pdf|docx?|xlsx?|pptx?|txt)$/i};
     if(file.size>rule.max){setError(`${rule.label} files must be ${rule.max/1024/1024} MB or smaller.`);return;}
     if(!file.size||!extensions[type].test(file.name)||(type!=='document'&&file.type&&!rule.accept.split(',').includes(file.type))){setError(`Choose a supported ${rule.label.toLowerCase()} file.`);return;}
-    setError('');setPanel(null);
+    setError('');
     onMediaChange?.({type,url:URL.createObjectURL(file),mime:file.type,filename:file.name,size:file.size,file});
   };
   const chooseFile=(next:Kind)=>{setKind(next);setMenu(false);setError('');requestAnimationFrame(()=>fileRef.current?.click());};
@@ -104,14 +93,13 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
     }catch(reason){if(recordingId!==generation.current)return;cleanup();active.current=false;if(mounted.current){setProcessing(false);setRecording(false);setError(reason instanceof DOMException&&reason.name==='NotAllowedError'?'Microphone access was denied. Allow it in your browser or attach an audio file.':reason instanceof Error?reason.message:'Unable to access your microphone.');}}
   };
   const discard=()=>{encoding.current?.abort();generation.current++;cancelled.current=true;if(recorder.current?.state==='recording')recorder.current.stop();recorder.current=null;cleanup();active.current=false;setRecording(false);setProcessing(false);};
-  const preview=text.replace(/\{\{([a-z_]+)\}\}/g,(token,key)=>(examples[sample] as Record<string,string>)[key]??token);
   const locked=disabled||recording||processing;
   return <div ref={root} className={'v2-message-editor v2-composer'+(compact?' compact':'')}>
     <div className="v2-composer-box">
-      <textarea aria-label="Message" ref={ref} name={name} value={text} onChange={event=>change(event.target.value)} onPaste={pasteAttachment} required={!media} maxLength={4096} rows={compact?2:4} placeholder={compact?'Write a message…':'Write a message…'} disabled={locked}/>
+      <textarea aria-label="Message" ref={ref} name={name} value={text} onChange={event=>change(event.target.value)} onPaste={pasteAttachment} required={!media} maxLength={4096} rows={compact?2:4} placeholder="Write a message…" disabled={locked}/>
       <div className="v2-composer-toolbar">
         <div className="v2-composer-tools">
-          <button type="button" className="v2-icon-button" aria-label="Message options" aria-expanded={menu} title="Attachments and personalization" disabled={locked} onClick={()=>setMenu(current=>!current)}><MoreHorizontal size={20}/></button>
+          <button type="button" className="v2-icon-button" aria-label="Message options" aria-expanded={menu} title="Attachments" disabled={locked} onClick={()=>setMenu(current=>!current)}><MoreHorizontal size={20}/></button>
           {onMediaChange&&<button type="button" className="v2-icon-button" aria-label="Record audio" title="Record audio" disabled={locked} onClick={()=>void startRecording()}><Mic size={18}/></button>}
           {media&&<span className="v2-composer-hint"><Paperclip size={13}/> Attachment ready</span>}
         </div>
@@ -121,13 +109,10 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
     {menu&&<div className="v2-composer-menu" aria-label="Message options menu">
       {onMediaChange&&(Object.keys(mediaRules) as Kind[]).map(type=>{const Icon=mediaRules[type].icon;return <button type="button" key={type} onClick={()=>chooseFile(type)}><Icon size={17}/>{mediaRules[type].label}</button>;})}
       {onMediaChange&&<button type="button" onClick={()=>void startRecording()}><Mic size={17}/>Record audio</button>}
-      <button type="button" onClick={()=>{setPanel('fields');setMenu(false);}}><UserRound size={17}/>Personalize message</button>
-      <button type="button" onClick={()=>{setPanel('preview');setMenu(false);}}><Eye size={17}/>Preview message</button>
     </div>}
     {onMediaChange&&<input ref={fileRef} className="v2-hidden-file" type="file" accept={mediaRules[kind].accept} aria-label="Attach file" onChange={event=>{pickMedia(event.target.files?.[0]);event.target.value='';}}/>}
     {(recording||processing)&&<div className="v2-recording" role="status"><span className={recording?'v2-recording-dot':''}/><strong>{recording?`Recording ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`:'Preparing voice note…'}</strong>{recording&&<button type="button" onClick={()=>recorder.current?.stop()}><Square size={13}/> Stop</button>}<button type="button" aria-label="Discard recording" onClick={discard}><X size={16}/></button></div>}
     {media&&<div className="v2-composer-attachment"><div className="v2-attachment-content">{!media.file?<MediaPreview url={media.url} type={media.type} filename={media.filename}/>:media.type==='image'?<img src={media.url} alt={media.filename}/>:media.type==='video'?<video src={media.url} controls preload="metadata"/>:media.type==='audio'?<audio src={media.url} controls preload="metadata"/>:<FileText size={26}/>}<span><strong>{media.filename}</strong><small>{(media.size/1024/1024).toFixed(1)} MB</small></span></div><button type="button" className="v2-icon-button" disabled={locked} aria-label="Remove attachment" onClick={()=>onMediaChange?.(null)}><X size={16}/></button></div>}
-    {panel&&<section className="v2-composer-panel"><div className="v2-section-head"><strong>{panel==='fields'?'Personalize message':'Message preview'}</strong><button type="button" className="v2-icon-button" aria-label="Close message panel" onClick={()=>setPanel(null)}><X size={16}/></button></div>{panel==='fields'?<><p className="v2-muted">Insert a field from your contacts.</p><div className="v2-field-chips">{fields.map(([key,title])=><button type="button" key={key} onClick={()=>insert(key)}>{title}</button>)}</div><small className="v2-muted">Use matching spreadsheet columns. Missing values appear blank.</small></>:<><select aria-label="Preview contact" value={sample} onChange={event=>setSample(Number(event.target.value))}>{examples.map((contact,index)=><option key={contact.name} value={index}>{contact.first_name} · {contact.company}</option>)}</select><p className="v2-prewrap">{preview||(media?'Attachment only':'Write a message to preview it.')}</p><small className="v2-muted">Sample contact. Sending uses your imported leads.</small></>}</section>}
     {error&&<p className="v2-error" role="alert">{error}</p>}
   </div>;
 }
