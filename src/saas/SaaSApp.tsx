@@ -995,12 +995,12 @@ export default function SaaSApp() {
             </p>
           </div>
           <div className="v2-actions">
-            <span className="v2-muted">
+            <span className="v2-connection-summary">
               {
                 sessions.filter((s) => s.configured && s.status === "connected")
                   .length
               }{" "}
-              numbers connected
+              {sessions.filter((s) => s.configured && s.status === "connected").length === 1 ? "number connected" : "numbers connected"}
             </span>
             <button
               disabled={refreshing}
@@ -1072,7 +1072,7 @@ export default function SaaSApp() {
                   ["Replied", stats.replied],
                   ["Failed", stats.failed],
                   ["Opted Out", stats.optedOut],
-                ].map(([k, v]) => (
+                ].filter((_, index) => page === "Analytics" || index < 5).map(([k, v]) => (
                   <article className="v2-card" key={String(k)}>
                     <p>{k}</p>
                     <strong>{count(v).toLocaleString()}</strong>
@@ -1583,10 +1583,9 @@ export default function SaaSApp() {
               {subscription.status === "expired" && (
                 <p className="v2-error" role="alert">Your free trial has ended. Choose a paid plan to continue sending.</p>
               )}
-              <div className="v2-form-grid">
+              <div className="v2-form-grid v2-plan-limits">
                 {[
                   ["WhatsApp accounts", subscription.whatsappSessionLimit],
-                  ["Team members", subscription.teamMemberLimit],
                   ["Contacts", subscription.contactLimit],
                   ["Messages per month", subscription.monthlyMessageLimit],
                 ].map(([k, v]) => (
@@ -1604,12 +1603,12 @@ export default function SaaSApp() {
               </div>
               <p>{count(usage.messagesSent)} messages sent this month.</p>
               <p className="v2-muted">
-                Paid checkout will appear here after the test payment provider is selected and configured.
+                For plan changes, contact EightBit support.
               </p>
             </section>
           )}
           {page === "Settings" && (
-            <div className="v2-grid">
+            <div className="v2-grid v2-settings-grid">
               <section className="v2-card">
                 <h2>Profile</h2>
                 <form
@@ -1633,7 +1632,7 @@ export default function SaaSApp() {
                       maxLength={200}
                     />
                   </label>
-                  <p>{bootstrap.user?.email}</p>
+                  <label className="v2-field">Email<input value={bootstrap.user?.email || ""} readOnly aria-readonly="true" /></label>
                   <button className="v2-primary" disabled={busy}>
                     Save profile
                   </button>
@@ -1882,7 +1881,7 @@ function Auth({
           workspace.
         </p>
         <ol className="v2-auth-steps">
-          <li><span>1</span><div><strong>Make it your workspace</strong><p>Keep your contacts, campaigns and team together.</p></div></li>
+          <li><span>1</span><div><strong>Make it your workspace</strong><p>Keep your contacts, campaigns and conversations together.</p></div></li>
           <li><span>2</span><div><strong>Connect your WhatsApp</strong><p>Add your company’s numbers with a guided setup.</p></div></li>
           <li><span>3</span><div><strong>Start better conversations</strong><p>Follow delivery and manage replies in one place.</p></div></li>
         </ol>

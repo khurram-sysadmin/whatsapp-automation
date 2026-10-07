@@ -1234,3 +1234,42 @@ td {
 .v2-workspace-dialog .v2-connection-header {margin-bottom:12px;}
 .v2-workspace-note {color:#64748b;font-size:12px;background:#f5f8fc;border:1px solid #e8eef5;border-radius:10px;padding:12px;}
 .v2-workspace-dialog-actions {justify-content:flex-end;margin-top:22px;}
+/* Final consistency pass: balanced surfaces and readable compact controls. */
+.v2-workspace {padding-top:18px;}
+.v2-header > div:first-of-type {min-width:0;}
+.v2-header p {overflow-wrap:anywhere;}
+.v2-connection-summary {display:inline-flex;align-items:center;gap:7px;color:#536176;font-size:11px;white-space:nowrap;background:#f5f8fb;border:1px solid #e6ecf3;padding:7px 10px;border-radius:20px;}
+.v2-connection-summary::before {content:"";width:6px;height:6px;border-radius:50%;background:#8492a6;}
+.v2-settings-grid > .v2-card {display:flex;flex-direction:column;}
+.v2-settings-grid form {display:flex;flex-direction:column;flex:1;}
+.v2-settings-grid form > button {align-self:flex-start;margin-top:auto;}
+.v2-settings-grid input[readonly] {background:#f5f8fc;color:#65748a;}
+.v2-card h2 {line-height:1.4;margin-top:0;}
+.v2-row-button {gap:16px;min-height:49px;text-align:left;}
+.v2-row-button .v2-status {flex-shrink:0;}
+.v2-kpis .v2-card {padding:20px;}
+.v2-kpis .v2-card p {min-height:20px;margin:0 0 12px;font-size:12px;}
+.v2-shell .v2-section-head {gap:16px;flex-wrap:wrap;}
+.v2-shell .v2-section-head input {max-width:100%;}
+.v2-shell .v2-actions {row-gap:10px;}
+.v2-shell td {vertical-align:middle;}
+.v2-shell input:disabled,.v2-shell select:disabled {background:#f5f7fa;color:#69778b;}
+@media (max-width:1000px) and (min-width:761px) {.v2-kpis {grid-template-columns:repeat(3,minmax(0,1fr));}.v2-header {gap:16px;flex-wrap:wrap;}}
+@media (max-width:760px) {
+ .v2-header {gap:12px;padding:16px 18px;}
+ .v2-header > .v2-actions {justify-content:flex-end;}
+ .v2-connection-summary {margin-right:auto;padding:6px 8px;font-size:10px;}
+ .v2-kpis .v2-card {padding:16px;}
+ .v2-settings-grid form > button {margin-top:8px;}
+ .v2-workspace {padding-top:14px;}
+}
+.v2-plan-limits {grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.v2-plan-limits p {display:flex;flex-direction:column;gap:12px;margin:8px 0;padding:20px;border:1px solid #e7edf4;border-radius:12px;background:#f8fafc;}
+.v2-plan-limits strong {font-size:18px;letter-spacing:-.02em;color:#24344d;}
+@media(max-width:1000px){.v2-plan-limits{grid-template-columns:1fr;}.v2-plan-limits p{flex-direction:row;justify-content:space-between;align-items:center;}}
+.v2-shell input[type=file] {padding:7px;background:#f8fafc;cursor:pointer;}
+.v2-shell input[type=file]::file-selector-button {border:1px solid #dce3ec;border-radius:7px;padding:8px 12px;margin-right:12px;background:#fff;color:#34445c;font:inherit;font-weight:600;cursor:pointer;transition:background .16s;}
+.v2-shell input[type=file]::file-selector-button:hover {background:#fff1e9;border-color:#ffc7b3;}
+/* Keep dialog dismiss controls in the top right on narrow screens. */
+.v2-dialog > .v2-section-head {flex-direction:row;align-items:center;flex-wrap:nowrap;}
+.v2-dialog > .v2-section-head > button[aria-label^="Close"] {flex-shrink:0;margin-left:auto;}
