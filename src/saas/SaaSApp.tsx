@@ -33,6 +33,7 @@ import {
   Inbox,
 } from "lucide-react";
 import "./saas.css";
+import { AuthShowcase } from "./AuthShowcase";
 import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
 import { MessageEditor, mediaDraftFromRow, type MediaDraft } from "./MessageEditor";
 import { MediaPreview } from "./MediaPreview";
@@ -1870,21 +1871,10 @@ function Auth({
       <main className="v2-auth-layout">
       <section className="v2-auth-intro">
         <EightbitLogo size="lg" />
-        <p className="v2-auth-eyebrow">WHATSAPP OUTREACH</p>
-        <h1>
-          Your outreach.
-          <br />
-          One workspace.
-        </h1>
-        <p>
-          Organize contacts, send campaigns and manage conversations from one
-          workspace.
-        </p>
-        <ol className="v2-auth-steps">
-          <li><span>1</span><div><strong>Make it your workspace</strong><p>Keep your contacts, campaigns and conversations together.</p></div></li>
-          <li><span>2</span><div><strong>Connect your WhatsApp</strong><p>Add your company’s numbers with a guided setup.</p></div></li>
-          <li><span>3</span><div><strong>Start better conversations</strong><p>Follow delivery and manage replies in one place.</p></div></li>
-        </ol>
+        <p className="v2-auth-eyebrow"><span /> WHATSAPP OUTREACH</p>
+        <h1>Your next conversation.<br /><em>Beautifully connected.</em></h1>
+        <p className="v2-auth-description">Bring your WhatsApp campaigns, contacts and conversations together. Less busywork. More meaningful connections.</p>
+        <AuthShowcase />
       </section>
       <section className="v2-card v2-auth-form">
         <h2>
