@@ -37,6 +37,7 @@ import { TIME_ZONES, timeZoneLabel } from "../utils/timezones";
 import { MessageEditor, mediaDraftFromRow, type MediaDraft } from "./MessageEditor";
 import { MediaPreview } from "./MediaPreview";
 import { CampaignProgress } from "./CampaignProgress";
+import { InboxLayout, ContactAvatar, contactName } from "./InboxLayout";
 import { AutomaticConnection } from "./AutomaticConnection";
 export function OnboardingWelcome({ checking = false }: { checking?: boolean }) {
   return (
@@ -1243,7 +1244,7 @@ export default function SaaSApp() {
             />
           )}
           {page === "Campaigns" && !campaignId && (
-            <section className="v2-card">
+            <section className="v2-card v2-campaign-list">
               <div className="v2-section-head">
                 <h2>Campaigns</h2>
                 <input
@@ -1265,12 +1266,10 @@ export default function SaaSApp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {campaigns.filter(filtered).map((c) => (
-                      <tr key={c.campaignId}>
+                    {campaigns.filter(filtered).map((c,index) => (
+                      <tr key={c.campaignId} data-status={c.status} style={{animationDelay: `${Math.min(index,5)*30}ms`}}>
                         <td>
-                          <button onClick={() => setCampaign(c.campaignId)}>
-                            {c.name}
-                          </button>
+                          <button className="v2-campaign-name" onClick={() => setCampaign(c.campaignId)}><span className={"v2-campaign-symbol " + c.status}><Send size={16}/></span><span>{c.name}<small>View campaign</small></span></button>
                         </td>
                         <td>
                           {sessions.find(
@@ -1491,78 +1490,24 @@ export default function SaaSApp() {
             </section>
           )}
           {page === "Inbox" && (
-            <div className="v2-inbox">
-              <section className="v2-card">
-                <h2>Conversations</h2>
-                {!inbox.length && (
-                  <EmptyState
-                    title="No conversations yet"
-                    description="New replies from your customers will appear here."
-                  />
-                )}
-                {inbox.map((c) => (
-                  <button
-                    key={c.conversationId}
-                    className={
-                      "v2-conversation " +
-                      (conversationId === c.conversationId ? "selected" : "")
-                    }
-                    onClick={() => {
-                      setConversation(c.conversationId);
-                      setThread(null);
-                      if (canWrite)
-                        void action("markConversationRead", workspaceId, {
-                          conversationId: c.conversationId,
-                        })
-                          .then(() => refresh())
-                          .catch((e) => setError(errorText(e)));
-                    }}
-                  >
-                    <strong>
-                      {c.contact?.name ||
-                        c.contact?.firstName ||
-                        c.contact?.phoneE164}
-                    </strong>
-                    <span>
-                      {c.contact?.company} · {c.contact?.phoneE164}
-                    </span>
-                    <span>{c.lastMessage}</span>
-                    {count(c.unreadCount) > 0 && (
-                      <b>{count(c.unreadCount)} unread</b>
-                    )}
-                  </button>
-                ))}
-              </section>
-              <section className="v2-card">
+            <InboxLayout key={workspaceId} items={inbox} selectedId={conversationId} conversation={conversation}
+              connectionName={sessions.find(s=>s.whatsappSessionId===(conversation?.whatsappSessionId || inbox.find(c=>c.conversationId===conversationId)?.whatsappSessionId))?.displayName || "Removed connection"}
+              onBack={()=>{setConversation("");setThread(null);setReplyMedia(null);}}
+              onSelect={c=>{
+                setConversation(c.conversationId);setThread(null);setReplyMedia(null);
+                if(canWrite)void action("markConversationRead",workspaceId,{conversationId:c.conversationId}).then(()=>refresh()).catch(e=>setError(errorText(e)));
+              }}>
                 {conversation ? (
                   <>
-                    <h2>
-                      {conversation.contact?.name ||
-                        conversation.contact?.phoneE164}
-                    </h2>
-                    <p>
-                      {conversation.contact?.company} ·{" "}
-                      {conversation.contact?.phoneE164}
-                    </p>
-                    <p className="v2-muted">
-                      Via{" "}
-                      {sessions.find(
-                        (s) =>
-                          s.whatsappSessionId ===
-                          conversation.whatsappSessionId,
-                      )?.displayName || "Original connection"}
-                    </p>
                     <div className="v2-thread">
                       {rows(conversation.messages).map((m) => (
-                        <div
-                          className={"v2-bubble " + m.direction}
-                          key={m.messageId}
-                        >
-                          <p>{m.body}</p>
-                          {m.mediaUrl && <MediaPreview url={m.mediaUrl} type={m.mediaType} filename={m.mediaFilename} />}
-                          <small>
-                            {date(m.createdAt)} · {m.status}
-                          </small>
+                        <div className={"v2-chat-message " + m.direction} key={m.messageId}>
+                          <ContactAvatar name={m.direction==='outbound' ? label(bootstrap.user?.fullName || bootstrap.user?.email || 'You') : contactName(conversation.contact)}/>
+                          <div className={"v2-bubble " + m.direction}>
+                            {m.body&&<p>{m.body}</p>}
+                            {m.mediaUrl && <MediaPreview url={m.mediaUrl} type={m.mediaType} filename={m.mediaFilename} />}
+                            <small>{date(m.createdAt)} · {displayStatus(m.status)}</small>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1603,12 +1548,11 @@ export default function SaaSApp() {
                   </>
                 ) : (
                   <EmptyState
-                    title="Your conversations, in one place"
-                    description="Choose a conversation to read messages and reply."
+                    title={conversationId ? "Loading conversation…" : "Your conversations, in one place"}
+                    description={conversationId ? "Fetching messages securely." : "Choose a conversation to read messages and reply."}
                   />
                 )}
-              </section>
-            </div>
+            </InboxLayout>
           )}
           {page === "Templates" && (
             <>
