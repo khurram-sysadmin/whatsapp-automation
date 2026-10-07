@@ -25,7 +25,7 @@ await act(async()=>root.render(React.createElement(Harness)));
 const button=label=>[...document.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')===label||button.textContent.trim()===label);
 const click=async label=>{assert.ok(button(label),label);await act(async()=>{button(label).dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,5));});};
 assert.equal(document.querySelector('.v2-composer-panel'),null);assert.equal(document.querySelector('.v2-composer-menu'),null);
-await click('Message options');assert.deepEqual([...document.querySelectorAll('.v2-composer-menu button')].map(button=>button.textContent.trim()),['Image','Video','Audio','Document','Record audio']);await click('Message options');
+await click('Message options');assert.deepEqual([...document.querySelectorAll('.v2-composer-menu button')].map(button=>button.textContent.trim()),['Image','Video','Audio','Document']);await click('Message options');
 const paste=new dom.window.Event('paste',{bubbles:true,cancelable:true});Object.defineProperty(paste,'clipboardData',{value:{files:[new File(['screenshot'],'clipboard',{type:'image/png'})]}});await act(async()=>document.querySelector('textarea').dispatchEvent(paste));assert.equal(current.type,'image');assert.match(current.filename,/screenshot-.*\.png$/);await click('Remove attachment');
 await click('Record audio');assert.ok(document.querySelector('.v2-recording').textContent.includes('Recording'));
 await act(async()=>document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));

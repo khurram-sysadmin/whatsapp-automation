@@ -108,7 +108,6 @@ export function MessageEditor({value,defaultValue='',onChange,name,media,onMedia
     </div>
     {menu&&<div className="v2-composer-menu" aria-label="Message options menu">
       {onMediaChange&&(Object.keys(mediaRules) as Kind[]).map(type=>{const Icon=mediaRules[type].icon;return <button type="button" key={type} onClick={()=>chooseFile(type)}><Icon size={17}/>{mediaRules[type].label}</button>;})}
-      {onMediaChange&&<button type="button" onClick={()=>void startRecording()}><Mic size={17}/>Record audio</button>}
     </div>}
     {onMediaChange&&<input ref={fileRef} className="v2-hidden-file" type="file" accept={mediaRules[kind].accept} aria-label="Attach file" onChange={event=>{pickMedia(event.target.files?.[0]);event.target.value='';}}/>}
     {(recording||processing)&&<div className="v2-recording" role="status"><span className={recording?'v2-recording-dot':''}/><strong>{recording?`Recording ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`:'Preparing voice note…'}</strong>{recording&&<button type="button" onClick={()=>recorder.current?.stop()}><Square size={13}/> Stop</button>}<button type="button" aria-label="Discard recording" onClick={discard}><X size={16}/></button></div>}
