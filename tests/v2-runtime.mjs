@@ -129,4 +129,26 @@ assert.equal((await api(a,remove)).success,true);assert.equal((await api(a,remov
 const expected=JSON.parse(read('../docs/saas-v2/test-payloads.json')).actions.map(x=>x.action);for(const action of expected)assert.ok(covered.has(action),'Missing action test: '+action);checks.push('All 31 public actions exercised; connection removal retries and reconnect sender state verified');
 for(const role of ['anon','authenticated']){await db.exec('SET ROLE '+role);await assert.rejects(db.exec('SELECT * FROM outreach_v2.connection_checks'),/permission denied/);await assert.rejects(db.exec("SELECT public.eb_outreach_record_connection_check_v2(null,null,'status',200,'status_http','fixture')"),/permission denied/);await db.exec('RESET ROLE');}
 await db.exec('SET ROLE authenticated');await assert.rejects(db.exec('SELECT * FROM outreach_v2.messages'),/permission denied/);await assert.rejects(db.exec("SELECT public.eb_outreach_api_v2('11111111-1111-4111-8111-111111111111','{}')"),/permission denied/);await db.exec('RESET ROLE');checks.push('Browser roles cannot read private queues or call trusted-backend RPCs');
+await db.exec(read('../backend/supabase/v2-review/015-admin-usage-totals.sql'));
+await db.exec(read('../backend/supabase/v2-review/015-admin-usage-totals.sql'));
+await db.query('INSERT INTO public.platform_admins(user_id) VALUES($1)',[a]);
+const additional=(await api(a,{action:'workspaceCreate',companyName:'Second A',timezone:'Asia/Riyadh'})).data.workspaceId;
+assert.ok(additional);
+assert.equal((await api(a,{action:'bootstrap'})).data.workspaces.length,2);
+const report=(await api(a,{action:'adminOverview'})).data;
+assert.equal(report.find(w=>w.workspace_id===additional).owner_workspaces_total,2);
+const users=(await db.query('SELECT outreach_v2.admin_user_usage_v2($1) r',[a])).rows[0].r;
+const owner=users.find(u=>u.owner_user_id===a);
+assert.equal(owner.workspaces_total,2);assert.equal(owner.workspaces.length,2);
+assert.equal(users.find(u=>u.owner_user_id===viewer).workspaces_total,0);
+const sum=(await db.query('SELECT coalesce(sum(messages_sent),0)::integer n FROM outreach.usage_monthly WHERE workspace_id IN (SELECT id FROM public.workspaces WHERE created_by=$1)',[a])).rows[0].n;
+assert.equal(owner.messages_sent_lifetime,sum);
+assert.equal((await api(b,{action:'adminOverview'})).error.code,'FORBIDDEN');
+await assert.rejects(db.query('SELECT outreach_v2.admin_user_usage_v2($1)',[b]),/Platform admin/);
+for(const w of report){assert.ok(!('message' in w));for(const c of w.campaigns)assert.deepEqual(Object.keys(c).sort(),['campaignId','campaignName','status','contacts','queued','sent','failed'].sort());}
+for(const role of ['anon','authenticated']){
+ for(const fn of ['admin_usage_v2','admin_user_usage_v2'])assert.equal((await db.query("SELECT has_function_privilege($1,$2,'EXECUTE') allowed",[role,'outreach_v2.'+fn+'(uuid)'])).rows[0].allowed,false);
+}
+assert.equal(owner.messages_sent_month,owner.workspaces.reduce((n,w)=>n+w.messages_sent_month,0));
+checks.push('Admin reports cover multiple persisted workspaces, users without workspaces, monthly/lifetime counts, confidential-field exclusion and denied non-admin/browser access');
 console.log(JSON.stringify({passed:true,checks,publicActionsCovered:expected.length,noExternalCalls:true,vaultEncryptionTested:false,concurrentDatabaseTransactionsTested:false}));await db.close();
